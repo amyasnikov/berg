@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"google.golang.org/protobuf/types/known/anypb"
+	api "github.com/osrg/gobgp/v3/api"
+    "google.golang.org/protobuf/proto"
+
 )
 
 
@@ -15,12 +18,20 @@ type ipv4Route struct {
 
 
 func ipv4FromApi(apiRoute *anypb.Any) (ipv4Route, error) {
-
+	var ip api.IPAddressPrefix
+	err := anypb.UnmarshalTo(apiRoute, &ip, proto.UnmarshalOptions{})
+	if err == nil {
+		return ipv4Route{
+			Prefix: ip.Prefix,
+			Prefixlen: ip.PrefixLen,
+		}, nil
+	}
+	return ipv4Route{}, err
 }
 
 
 func (r ipv4Route) String() string {
-	return fmt.Sprintf("%s/%d", r.Prefix, r.Prefixlen)
+	return fmt.Sprintf("%s/%d vrf %s", r.Prefix, r.Prefixlen, r.Vrf)
 }
 
 
