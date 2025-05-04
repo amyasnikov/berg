@@ -9,6 +9,7 @@ import (
 
 type AttrFilter struct {
 	includeAttrs []proto.Message
+	
 }
 
 func (f *AttrFilter) Filter(attrs []*anypb.Any) []*anypb.Any {

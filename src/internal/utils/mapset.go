@@ -13,6 +13,14 @@ type MapSet[K comparable, V comparable] struct {
 }
 
 
+func NewMapSet[K comparable, V comparable]() *MapSet[K, V] {
+	return &MapSet[K, V]{
+		ms: map[K]mapset.Set[V]{},
+		lock: sync.RWMutex{},
+	}
+}
+
+
 func (ms *MapSet[K, V]) store (key K, value V) {
 	curval, ok := ms.ms[key]
 	if !ok {

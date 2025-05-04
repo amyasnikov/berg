@@ -9,11 +9,37 @@ import (
 )
 
 
-type EvpnRouteGen struct {
+type evpnRouteGen struct {
 	attrFilter *AttrFilter
 }
 
-func (g *EvpnRouteGen) GenRoute (route ipv4Route, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route) {
+func newEvpnRouteGen() *evpnRouteGen {
+	allowedAttrs := []proto.Message{
+		&api.CommunitiesAttribute{},
+		&api.As4PathAttribute{},
+		&api.As4AggregatorAttribute{},
+		&api.OriginAttribute{},
+		&api.MultiExitDiscAttribute{},
+		&api.LocalPrefAttribute{},
+		&api.AtomicAggregateAttribute{},
+		&api.OriginatorIdAttribute{},
+		&api.ClusterListAttribute{},
+		&api.AsPathAttribute{},
+		&api.AggregatorAttribute{},
+		&api.AigpAttribute{},
+		&api.LargeCommunitiesAttribute{},
+		&api.MpReachNLRIAttribute{},
+		&api.MpUnreachNLRIAttribute{},
+		&api.TunnelEncapAttribute{},
+		&api.PmsiTunnelAttribute{},
+	}
+	return &evpnRouteGen{
+		attrFilter: &AttrFilter{includeAttrs: allowedAttrs},
+	}
+
+}
+
+func (g *evpnRouteGen) GenRoute (route ipv4Route, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route) {
 	er.Rd = vrf.Rd
 	er.RouteTargets = vrf.ExportRouteTargets
 	er.Prefix = route.Prefix
@@ -24,7 +50,7 @@ func (g *EvpnRouteGen) GenRoute (route ipv4Route, vrf dto.Vrf, pattrs []*anypb.A
 	return
 }
 
-func (g *EvpnRouteGen) mustFindNextHop(pattrs []*anypb.Any) string {
+func (g *evpnRouteGen) mustFindNextHop(pattrs []*anypb.Any) string {
 	var nh api.NextHopAttribute
 	for _, attr := range pattrs {
 		if err := anypb.UnmarshalTo(attr, &nh, proto.UnmarshalOptions{}); err == nil {
@@ -37,6 +63,29 @@ func (g *EvpnRouteGen) mustFindNextHop(pattrs []*anypb.Any) string {
 
 type ipv4RouteGen struct {
 	attrFilter *AttrFilter
+}
+
+
+func newIPv4RouteGen() *ipv4RouteGen{
+	allowedAttrs := []proto.Message{
+		&api.CommunitiesAttribute{},
+		&api.As4PathAttribute{},
+		&api.As4AggregatorAttribute{},
+		&api.OriginAttribute{},
+		&api.MultiExitDiscAttribute{},
+		&api.LocalPrefAttribute{},
+		&api.AtomicAggregateAttribute{},
+		&api.OriginatorIdAttribute{},
+		&api.ClusterListAttribute{},
+		&api.AsPathAttribute{},
+		&api.AggregatorAttribute{},
+		&api.AigpAttribute{},
+		&api.LargeCommunitiesAttribute{},
+		&api.NextHopAttribute{},
+	}
+	return &ipv4RouteGen{
+		attrFilter: &AttrFilter{includeAttrs: allowedAttrs},
+	}
 }
 
 func (g *ipv4RouteGen) genRoute (route evpnRoute, pattrs []*anypb.Any, vrf string) (ir dto.IPv4Route) {
