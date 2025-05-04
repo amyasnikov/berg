@@ -53,21 +53,21 @@ func parseRT(rtStr string) (*anypb.Any, error) {
 	switch v := raw.(type) {
 	case *bgp.TwoOctetAsSpecificExtended:
 		msg = &api.TwoOctetAsSpecificExtended{
-			IsTransitive: v.IsTransitive,
+			IsTransitive: true,
 			SubType:      uint32(v.SubType),
 			Asn:          uint32(v.AS),
 			LocalAdmin:   v.LocalAdmin,
 		}
 	case *bgp.IPv4AddressSpecificExtended:
 		msg = &api.IPv4AddressSpecificExtended{
-			IsTransitive: v.IsTransitive,
+			IsTransitive: true,
 			SubType:      uint32(v.SubType),
 			Address:      v.IPv4.String(),
 			LocalAdmin:   uint32(v.LocalAdmin),
 		}
 	case *bgp.FourOctetAsSpecificExtended:
 		msg = &api.FourOctetAsSpecificExtended{
-			IsTransitive: v.IsTransitive,
+			IsTransitive: true,
 			SubType:      uint32(v.SubType),
 			Asn:          v.AS,
 			LocalAdmin:   uint32(v.LocalAdmin),

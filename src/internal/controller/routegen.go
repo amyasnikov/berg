@@ -39,7 +39,10 @@ type ipv4RouteGen struct {
 	attrFilter *AttrFilter
 }
 
-
-func (g *ipv4RouteGen) genRoute (route evpnRoute, pattrs []*anypb.Any) (ir dto.IPv4Route) {
+func (g *ipv4RouteGen) genRoute (route evpnRoute, pattrs []*anypb.Any, vrf string) (ir dto.IPv4Route) {
+	ir.PathAttrs = g.attrFilter.Filter(pattrs)
+	ir.Prefix = route.Prefix
+	ir.Prefixlen = route.Prefixlen
+	ir.Vrf = vrf
 	return
 }
