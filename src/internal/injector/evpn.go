@@ -68,14 +68,15 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
 }
 
 
-func (c *EvpnInjector) DelRoute(uuid []byte) error {
-	delReq := &api.DeletePathRequest{
+func (c *EvpnInjector) DelRoute(uuid uuid.UUID) error {
+	binUuid, _ := uuid.MarshalBinary()
+    delReq := &api.DeletePathRequest{
 		Family: &api.Family{
             Afi: api.Family_AFI_L2VPN,
             Safi: api.Family_SAFI_EVPN,
 		},
 		Path: &api.Path{
-			Uuid: uuid,
+			Uuid: binUuid,
 		},
 	}
 

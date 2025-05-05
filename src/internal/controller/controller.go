@@ -62,10 +62,10 @@ func (c *IPv4Controller) HandleUpdate(path *api.Path) error {
 		panic(fmt.Sprintf("Invalid configuration: neigbor %s has no associated VRF", path.GetNeighborIp()))
 	}
 	route, err := ipv4FromApi(path.GetNlri())
-	route.Vrf = vrf.Name
 	if err != nil {
 		return err
 	}
+	route.Vrf = vrf.Name
 	evpnRoute := c.routeGen.GenRoute(route, vrf, path.GetPattrs())
 	evpnUuid, err := c.evpnInjector.AddType5Route(evpnRoute)
 	if err != nil {

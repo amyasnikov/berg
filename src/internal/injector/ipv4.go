@@ -44,7 +44,8 @@ func (c *IPv4Injector) AddRoute(route dto.IPv4Route) (uuid.UUID, error) {
 	return uuid.FromBytes(resp.Uuid)
 }
 
-func (c *IPv4Injector) DelRoute(uuid []byte, vrf string) error {
+func (c *IPv4Injector) DelRoute(uuid uuid.UUID, vrf string) error {
+	binUuid, _ := uuid.MarshalBinary()
 	delReq := &api.DeletePathRequest{
 		TableType: api.TableType_VRF,
 		VrfId:     vrf,
@@ -53,7 +54,7 @@ func (c *IPv4Injector) DelRoute(uuid []byte, vrf string) error {
 			Safi: api.Family_SAFI_UNICAST,
 		},
 		Path: &api.Path{
-			Uuid: uuid,
+			Uuid: binUuid,
 		},
 	}
 
