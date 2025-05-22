@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/amyasnikov/gober/internal/dto"
-	"github.com/amyasnikov/gober/internal/utils"
+	"github.com/amyasnikov/berg/internal/dto"
+	"github.com/amyasnikov/berg/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"

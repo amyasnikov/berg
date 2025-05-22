@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/amyasnikov/gober/internal/dto"
+	"github.com/amyasnikov/berg/internal/dto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/proto"
 	api "github.com/osrg/gobgp/v3/api"

@@ -1,4 +1,4 @@
-module github.com/amyasnikov/gober
+module github.com/amyasnikov/berg
 
 go 1.24
 

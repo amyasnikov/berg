@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/amyasnikov/gober/internal/dto"
+	"github.com/amyasnikov/berg/internal/dto"
 	"github.com/google/uuid"
 
 )

@@ -2,12 +2,10 @@ package app
 
 import (
 	"context"
-
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
-	"github.com/osrg/gobgp/v3/pkg/server"
-	ctrl "github.com/amyasnikov/gober/internal/controller"
-	"github.com/amyasnikov/gober/internal/injector"
+	ctrl "github.com/amyasnikov/berg/internal/controller"
+	"github.com/amyasnikov/berg/internal/injector"
 
 )
 
@@ -16,10 +14,10 @@ type App struct {
 	ipv4Controller controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
-	bgpServer      *server.BgpServer
+	bgpServer      bgpServer
 }
 
-func NewApp(config *oc.BgpConfigSet, bgpServer *server.BgpServer, bufsize uint64) *App {
+func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64) *App {
 	ipv4Injector := injector.NewIPv4Injector(bgpServer)
 	evpnInjector := injector.NewEvpnInjector(bgpServer)
 	neighborConfig := make([]oc.NeighborConfig, 0, len(config.Neighbors))
@@ -79,7 +77,6 @@ func (a *App) handlePath(controller controller, path *api.Path) {
 }
 
 func (a *App) Serve(ctx context.Context) {
-	go a.bgpServer.Serve()
 	watchReq := &api.WatchEventRequest{
 		Table: &api.WatchEventRequest_Table{
 			Filters: []*api.WatchEventRequest_Table_Filter{

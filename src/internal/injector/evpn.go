@@ -3,7 +3,7 @@ package injector
 import (
 	"context"
 
-	"github.com/amyasnikov/gober/internal/dto"
+	"github.com/amyasnikov/berg/internal/dto"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"
