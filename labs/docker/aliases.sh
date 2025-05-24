@@ -1,0 +1,5 @@
+alias g1='gobgp -u 10.5.0.1'
+alias g2='gobgp -u 10.5.0.2'
+alias g3='gobgp -u 10.5.0.3'
+alias g4='gobgp -u 10.5.0.4'
+alias g5='gobgp -u 10.5.0.5'

@@ -1,0 +1,58 @@
+services:
+  berg:
+    build:
+      context: ../../
+      dockerfile: labs/docker/Dockerfile
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.100
+    volumes:
+      - ${PWD}/berg.toml:/berg/config.toml
+
+  g1:
+    image: jauderho/gobgp:v3.37.0
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.1
+    volumes:
+      - ${PWD}/g1.toml:/config/gobgp.toml
+
+  g2:
+    image: jauderho/gobgp:v3.37.0
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.2
+    volumes:
+      - ${PWD}/g2.toml:/config/gobgp.toml
+
+  g3:
+    image: jauderho/gobgp:v3.37.0
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.3
+    volumes:
+      - ${PWD}/g3.toml:/config/gobgp.toml
+
+  g4:
+    image: jauderho/gobgp:v3.37.0
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.4
+    volumes:
+      - ${PWD}/g4.toml:/config/gobgp.toml
+
+  g5:
+    image: jauderho/gobgp:v3.37.0
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.5
+    volumes:
+      - ${PWD}/g5.toml:/config/gobgp.toml
+
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/24
+         gateway: 10.5.0.254
