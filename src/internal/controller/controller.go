@@ -14,14 +14,14 @@ import (
 )
 
 // Handles updates and withdrawals of IPv4 routes
-type IPv4Controller struct {
+type VPNv4Controller struct {
 	evpnInjector      evpnInjector
-	neighborVrfMap    map[string]dto.Vrf
-	redistributedEvpn *xsync.Map[ipv4Route, uuid.UUID]
+	rdVrfMap    *xsync.Map[string, dto.Vrf]
+	redistributedEvpn *xsync.Map[vpnRoute, uuid.UUID]
 	routeGen          *evpnRouteGen
 }
 
-func NewIPv4Controller(injector evpnInjector, neighborCfg []oc.NeighborConfig, vrfVfg []oc.VrfConfig) *IPv4Controller {
+func NewVPNv4Controller(injector evpnInjector, vrfCfg []oc.VrfConfig) *VPNv4Controller {
 	vrfMap := make(map[string]oc.VrfConfig, len(vrfVfg))
 	for _, vrf := range vrfVfg {
 		vrfMap[vrf.Name] = vrf
@@ -56,16 +56,15 @@ func NewIPv4Controller(injector evpnInjector, neighborCfg []oc.NeighborConfig, v
 }
 
 
-func (c *IPv4Controller) HandleUpdate(path *api.Path) error {
-	vrf, ok := c.neighborVrfMap[path.GetNeighborIp()]
-	if !ok {
-		panic(fmt.Sprintf("Invalid configuration: neigbor %s has no associated VRF", path.GetNeighborIp()))
-	}
-	route, err := ipv4FromApi(path.GetNlri())
+func (c *VPNv4Controller) HandleUpdate(path *api.Path) error {
+	route, err := vpnFromApi(path.GetNlri())
 	if err != nil {
 		return err
 	}
-	route.Vrf = vrf.Name
+	vrf, ok := c.rdVrfMap.Load(route.Rd)
+	if !ok {
+		return nil
+	}
 	evpnRoute := c.routeGen.GenRoute(route, vrf, path.GetPattrs())
 	evpnUuid, err := c.evpnInjector.AddType5Route(evpnRoute)
 	if err != nil {
@@ -78,7 +77,7 @@ func (c *IPv4Controller) HandleUpdate(path *api.Path) error {
 	return nil
 }
 
-func (c *IPv4Controller) HandleWithdraw(path *api.Path) error {
+func (c *VPNv4Controller) HandleWithdraw(path *api.Path) error {
 	route, err := ipv4FromApi(path.GetNlri())
 	if err != nil {
 		return err
@@ -102,7 +101,7 @@ type EvpnController struct {
 	routeGen          *ipv4RouteGen
 }
 
-func NewEvpnController (injector ipv4Injector, vrfVfg []oc.VrfConfig) *EvpnController {
+func NewEvpnController(injector ipv4Injector, vrfVfg []oc.VrfConfig) *EvpnController {
 	rtmap := map[string]string{}
 	for _, vrf := range vrfVfg {
 		rtlist := vrf.BothRtList

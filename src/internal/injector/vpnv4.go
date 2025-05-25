@@ -13,29 +13,26 @@ import (
 
 
 
-type EvpnInjector struct {
+type VPNv4Injector struct {
 	s bgpServer
 }
 
 
-func NewEvpnInjector(s bgpServer) *EvpnInjector {
-	return &EvpnInjector{s: s}
+func NewVPNv4Injector(s bgpServer) *VPNv4Injector {
+	return &VPNv4Injector{s: s}
 }
 
 
-func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
+func (c *VPNv4Injector) AddRoute(route dto.VPNv4Route) (uuid.UUID, error) {
     rd := mustParseRD(route.Rd)
 
-	nlri := mustAny(&api.EVPNIPPrefixRoute{
+	nlri := mustAny(&api.LabeledVPNIPAddressPrefix{
         Rd:           rd,
-        Esi:          &api.EthernetSegmentIdentifier{},
-        EthernetTag:  0,
-        IpPrefix:     route.Prefix,
-        IpPrefixLen:  route.Prefixlen,
-        GwAddress:    route.Gateway,
-        Label:        uint32(route.Vni),
+        Prefix:     route.Prefix,
+        PrefixLen:  route.Prefixlen,
+		Labels: []uint32{},
     })
-    extcomms := make([]*anypb.Any, 0, len(route.RouteTargets) + 1)
+    extcomms := make([]*anypb.Any, 0, len(route.RouteTargets))
     var merr error
     for _, rtString := range route.RouteTargets {
         rt, err := parseRT(rtString)
@@ -45,16 +42,15 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
     if merr != nil {
         return uuid.Nil, merr
     }
-    encap := mustAny(&api.EncapExtended{TunnelType: 1}) // VXLAN encap
     extcommAttr, _ := anypb.New(&api.ExtendedCommunitiesAttribute{
-        Communities: append(extcomms, encap),
+        Communities: extcomms,
     })
     pattrs := append(route.PathAttrs, extcommAttr)
     req := &api.AddPathRequest{
         Path: &api.Path{
             Family: &api.Family{
-                Afi: api.Family_AFI_L2VPN,
-                Safi: api.Family_SAFI_EVPN,
+                Afi: api.Family_AFI_IP,
+                Safi: api.Family_SAFI_MPLS_VPN,
             },
             Nlri: nlri,
             Pattrs: pattrs,
@@ -68,10 +64,10 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
 }
 
 
-func (c *EvpnInjector) DelRoute(uuid uuid.UUID) error {
+func (c *VPNv4Injector) DelRoute(uuid uuid.UUID) error {
 	family := &api.Family{
-        Afi: api.Family_AFI_L2VPN,
-        Safi: api.Family_SAFI_EVPN,
+        Afi: api.Family_AFI_IP,
+        Safi: api.Family_SAFI_MPLS_VPN,
 	}
     return delRoute(c.s, uuid, family)
 }

@@ -1,8 +1,10 @@
 package injector
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/packet/bgp"
 	"google.golang.org/protobuf/proto"
@@ -89,4 +91,20 @@ func mustAny(m proto.Message) *anypb.Any {
 		panic(err)
 	}
 	return a
+}
+
+
+func delRoute(server bgpServer, uuid uuid.UUID, family *api.Family) error {
+	binUuid, _ := uuid.MarshalBinary()
+    delReq := &api.DeletePathRequest{
+		Family: family,
+		Path: &api.Path{
+			Uuid: binUuid,
+		},
+	}
+
+	if err := server.DeletePath(context.TODO(), delReq); err != nil {
+		return err
+	}
+	return nil
 }

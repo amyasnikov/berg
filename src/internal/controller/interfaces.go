@@ -7,8 +7,8 @@ import (
 )
 
 
-type ipv4Injector interface {
-	AddRoute(route dto.IPv4Route) (uuid.UUID, error)
+type vpnv4Injector interface {
+	AddRoute(route dto.VPNv4Route) (uuid.UUID, error)
 	DelRoute(uuid uuid.UUID, vrf string) error
 }
 

@@ -13,6 +13,7 @@ type IPv4Route struct {
 	Vrf string
 }
 
+
 type Evpn5Route struct {
 	Rd string
 	RouteTargets []string
@@ -23,6 +24,14 @@ type Evpn5Route struct {
 	PathAttrs []*anypb.Any
 }
 
+
+type VPNv4Route struct {
+	Rd string
+	RouteTargets []string
+	Prefix string
+	Prefixlen uint32
+	PathAttrs []*anypb.Any
+}
 
 type Vrf struct {
 	Name string

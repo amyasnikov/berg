@@ -2,12 +2,13 @@ package controller
 
 import (
 	"fmt"
-
+	"errors"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+var invalidRD = errors.New("invalid RD")
 
 
 func extractRouteTargets(pattrs []*anypb.Any) []string{
@@ -35,4 +36,18 @@ func extractRouteTargets(pattrs []*anypb.Any) []string{
 		}
 	}
 	return routeTargets
+}
+
+func extractRd(rd *anypb.Any) (string, error) {
+	rd1 := api.RouteDistinguisherTwoOctetASN{}
+	rd2 := api.RouteDistinguisherFourOctetASN{}
+	rd3 := api.RouteDistinguisherIPAddress{}
+	if err := rd.UnmarshalTo(&rd1); err == nil {
+		return rd1.String(), nil
+	} else if err = rd.UnmarshalTo(&rd2); err == nil {
+		return rd2.String(), nil
+	} else if err = rd.UnmarshalTo(&rd3); err == nil {
+		return rd3.String(), nil
+	}
+	return "", invalidRD
 }

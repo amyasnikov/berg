@@ -39,7 +39,7 @@ func newEvpnRouteGen() *evpnRouteGen {
 
 }
 
-func (g *evpnRouteGen) GenRoute (route ipv4Route, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route) {
+func (g *evpnRouteGen) GenRoute(route ipv4Route, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route) {
 	er.Rd = vrf.Rd
 	er.RouteTargets = vrf.ExportRouteTargets
 	er.Prefix = route.Prefix
