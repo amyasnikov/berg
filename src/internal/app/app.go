@@ -2,23 +2,25 @@ package app
 
 import (
 	"context"
-	api "github.com/osrg/gobgp/v3/api"
-	"github.com/osrg/gobgp/v3/pkg/config/oc"
+	"fmt"
+
 	ctrl "github.com/amyasnikov/berg/internal/controller"
 	"github.com/amyasnikov/berg/internal/injector"
-
+	api "github.com/osrg/gobgp/v3/api"
+	"github.com/osrg/gobgp/v3/pkg/config/oc"
 )
 
 type App struct {
 	config         *oc.BgpConfigSet
-	ipv4Controller controller
+	vpnController controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
 	bgpServer      bgpServer
+	logger logger
 }
 
-func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64) *App {
-	ipv4Injector := injector.NewIPv4Injector(bgpServer)
+func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger logger) *App {
+	vpnInjector := injector.NewVPNv4Injector(bgpServer)
 	evpnInjector := injector.NewEvpnInjector(bgpServer)
 	neighborConfig := make([]oc.NeighborConfig, 0, len(config.Neighbors))
 	for _, neighbor := range config.Neighbors {
@@ -28,14 +30,15 @@ func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64) *App {
 	for _, vrf := range config.Vrfs {
 		vrfConfig = append(vrfConfig, vrf.Config)
 	}
-	ipv4Controller := ctrl.NewIPv4Controller(evpnInjector, neighborConfig, vrfConfig)
-	evpnController := ctrl.NewEvpnController(ipv4Injector, vrfConfig)
+	vpnController := ctrl.NewVPNv4Controller(evpnInjector, vrfConfig)
+	evpnController := ctrl.NewEvpnController(vpnInjector, vrfConfig)
 	return &App{
 		config: config,
-		ipv4Controller: ipv4Controller,
+		vpnController: vpnController,
 		evpnController: evpnController,
 		eventChan: make(chan *api.WatchEventResponse, bufsize),
 		bgpServer: bgpServer,
+		logger: logger,
 	}
 }
 
@@ -59,7 +62,7 @@ func (a *App) receiver(ctx context.Context) {
 				family := path.GetFamily()
 				switch {
 				case family.Afi == api.Family_AFI_IP && family.Safi == api.Family_SAFI_UNICAST:
-					a.handlePath(a.ipv4Controller, path)
+					a.handlePath(a.vpnController, path)
 				case family.Afi == api.Family_AFI_L2VPN && family.Safi == api.Family_SAFI_EVPN:
 					a.handlePath(a.evpnController, path)
 				}
@@ -69,10 +72,14 @@ func (a *App) receiver(ctx context.Context) {
 }
 
 func (a *App) handlePath(controller controller, path *api.Path) {
+	var handler func(*api.Path) error
 	if path.IsWithdraw {
-		controller.HandleWithdraw(path)
+		handler = controller.HandleWithdraw
 	} else {
-		controller.HandleUpdate(path)
+		handler = controller.HandleUpdate
+	}
+	if err := handler(path); err != nil {
+		a.logger.Error(err.Error())
 	}
 }
 

@@ -25,7 +25,7 @@ type Evpn5Route struct {
 }
 
 
-type VPNv4Route struct {
+type VPNRoute struct {
 	Rd string
 	RouteTargets []string
 	Prefix string

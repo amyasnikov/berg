@@ -64,6 +64,10 @@ type vpnRoute struct {
 	Label uint32
 }
 
+func (r vpnRoute) String() string {
+	return fmt.Sprintf("%s:%s/%d", r.Rd, r.Prefix, r.Prefixlen)
+}
+
 
 func vpnFromApi(apiRoute *anypb.Any) (vpnRoute, error) {
 	var route api.LabeledVPNIPAddressPrefix

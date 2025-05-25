@@ -51,3 +51,19 @@ func extractRd(rd *anypb.Any) (string, error) {
 	}
 	return "", invalidRD
 }
+
+
+func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
+	var nlri api.MpReachNLRIAttribute
+	for _, attr := range pattrs {
+		if err := anypb.UnmarshalTo(attr, &nlri, proto.UnmarshalOptions{}); err == nil {
+			if nhcount := len(nlri.NextHops); nhcount != 1 {
+				return "", fmt.Errorf(
+					"found %d NextHops for route %s, while 1 was expected", nhcount, route.String(),
+				)
+			}
+			return nlri.NextHops[1], nil
+    	}
+  	}
+	return "", fmt.Errorf("no nexthop was found for route %s", route.String())
+}

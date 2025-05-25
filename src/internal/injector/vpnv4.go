@@ -13,17 +13,18 @@ import (
 
 
 
-type VPNv4Injector struct {
+type VPNInjector struct {
 	s bgpServer
+    afi api.Family_Afi
 }
 
 
-func NewVPNv4Injector(s bgpServer) *VPNv4Injector {
-	return &VPNv4Injector{s: s}
+func NewVPNv4Injector(s bgpServer) *VPNInjector {
+	return &VPNInjector{s: s, afi: api.Family_AFI_IP}
 }
 
 
-func (c *VPNv4Injector) AddRoute(route dto.VPNv4Route) (uuid.UUID, error) {
+func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
     rd := mustParseRD(route.Rd)
 
 	nlri := mustAny(&api.LabeledVPNIPAddressPrefix{
@@ -49,7 +50,7 @@ func (c *VPNv4Injector) AddRoute(route dto.VPNv4Route) (uuid.UUID, error) {
     req := &api.AddPathRequest{
         Path: &api.Path{
             Family: &api.Family{
-                Afi: api.Family_AFI_IP,
+                Afi: c.afi,
                 Safi: api.Family_SAFI_MPLS_VPN,
             },
             Nlri: nlri,
@@ -64,9 +65,9 @@ func (c *VPNv4Injector) AddRoute(route dto.VPNv4Route) (uuid.UUID, error) {
 }
 
 
-func (c *VPNv4Injector) DelRoute(uuid uuid.UUID) error {
+func (c *VPNInjector) DelRoute(uuid uuid.UUID) error {
 	family := &api.Family{
-        Afi: api.Family_AFI_IP,
+        Afi: c.afi,
         Safi: api.Family_SAFI_MPLS_VPN,
 	}
     return delRoute(c.s, uuid, family)

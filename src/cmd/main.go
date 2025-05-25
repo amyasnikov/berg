@@ -37,7 +37,7 @@ func main() {
 		server.GrpcOption(grpcOpts),
 		server.LoggerOption(bgpLogger))
 	bufSize := 100000
-	berg := app.NewApp(opts.GobgpConfig, bgpServer, uint64(bufSize))
+	berg := app.NewApp(opts.GobgpConfig, bgpServer, uint64(bufSize), logger)
 	ctx, stopBerg := context.WithCancel(context.Background())
 	go bgpServer.Serve()
 	_, err := config.InitialConfig(context.Background(), bgpServer, opts.GobgpConfig, false)

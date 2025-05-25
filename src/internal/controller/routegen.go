@@ -1,12 +1,14 @@
 package controller
 
 import (
-	"github.com/amyasnikov/berg/internal/dto"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/proto"
-	api "github.com/osrg/gobgp/v3/api"
 
+	"github.com/amyasnikov/berg/internal/dto"
+	api "github.com/osrg/gobgp/v3/api"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
+
+
 
 
 type evpnRouteGen struct {
@@ -28,8 +30,6 @@ func newEvpnRouteGen() *evpnRouteGen {
 		&api.AggregatorAttribute{},
 		&api.AigpAttribute{},
 		&api.LargeCommunitiesAttribute{},
-		&api.MpReachNLRIAttribute{},
-		&api.MpUnreachNLRIAttribute{},
 		&api.TunnelEncapAttribute{},
 		&api.PmsiTunnelAttribute{},
 	}
@@ -39,34 +39,27 @@ func newEvpnRouteGen() *evpnRouteGen {
 
 }
 
-func (g *evpnRouteGen) GenRoute(route ipv4Route, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route) {
+func (g *evpnRouteGen) GenRoute(route vpnRoute, vrf dto.Vrf, pattrs []*anypb.Any) (er dto.Evpn5Route, err error) {
 	er.Rd = vrf.Rd
 	er.RouteTargets = vrf.ExportRouteTargets
 	er.Prefix = route.Prefix
 	er.Prefixlen = route.Prefixlen
-	er.Gateway = g.mustFindNextHop(pattrs)
+	er.Gateway, err = findNextHop(route, pattrs)
+	if err != nil {
+		return dto.Evpn5Route{}, err
+	}
 	er.Vni = vrf.Vni
 	er.PathAttrs = g.attrFilter.Filter(pattrs)
 	return
 }
 
-func (g *evpnRouteGen) mustFindNextHop(pattrs []*anypb.Any) string {
-	var nh api.NextHopAttribute
-	for _, attr := range pattrs {
-		if err := anypb.UnmarshalTo(attr, &nh, proto.UnmarshalOptions{}); err == nil {
-			return nh.GetNextHop()
-		}
-	}
-	panic("no nexthop found")
-}
 
-
-type ipv4RouteGen struct {
+type vpnRouteGen struct {
 	attrFilter *AttrFilter
 }
 
 
-func newIPv4RouteGen() *ipv4RouteGen{
+func newVpnRouteGen() *vpnRouteGen {
 	allowedAttrs := []proto.Message{
 		&api.CommunitiesAttribute{},
 		&api.As4PathAttribute{},
@@ -81,17 +74,18 @@ func newIPv4RouteGen() *ipv4RouteGen{
 		&api.AggregatorAttribute{},
 		&api.AigpAttribute{},
 		&api.LargeCommunitiesAttribute{},
-		&api.NextHopAttribute{},
+		&api.TunnelEncapAttribute{},
+		&api.PmsiTunnelAttribute{},
 	}
-	return &ipv4RouteGen{
+	return &vpnRouteGen{
 		attrFilter: &AttrFilter{includeAttrs: allowedAttrs},
 	}
 }
 
-func (g *ipv4RouteGen) genRoute (route evpnRoute, pattrs []*anypb.Any, vrf string) (ir dto.IPv4Route) {
-	ir.PathAttrs = g.attrFilter.Filter(pattrs)
-	ir.Prefix = route.Prefix
-	ir.Prefixlen = route.Prefixlen
-	ir.Vrf = vrf
+func (g *vpnRouteGen) GenRoute(route evpnRoute, pattrs []*anypb.Any) (r dto.VPNRoute) {
+	r.Rd = route.Rd
+	r.Prefix = route.Prefix
+	r.Prefixlen = route.Prefixlen
+	r.PathAttrs = g.attrFilter.Filter(pattrs)
 	return
 }
