@@ -14,7 +14,7 @@ import (
 // Handles updates and withdrawals of IPv4 routes
 type VPNv4Controller struct {
 	evpnInjector      evpnInjector
-	rdVrfMap    *xsync.Map[string, dto.Vrf]
+	rdVrfMap          *xsync.Map[string, dto.Vrf]
 	redistributedEvpn *xsync.Map[vpnRoute, uuid.UUID]
 	routeGen          *evpnRouteGen
 }
@@ -23,11 +23,11 @@ func NewVPNv4Controller(injector evpnInjector, vrfCfg []oc.VrfConfig) *VPNv4Cont
 	rdVrfMap := xsync.NewMap[string, dto.Vrf]()
 	for _, vrf := range vrfCfg {
 		vrfDto := dto.Vrf{
-			Name: vrf.Name,
-			Rd: vrf.Rd,
+			Name:               vrf.Name,
+			Rd:                 vrf.Rd,
 			ImportRouteTargets: vrf.BothRtList,
 			ExportRouteTargets: vrf.BothRtList,
-			Vni: vrf.Id,
+			Vni:                vrf.Id,
 		}
 		if len(vrf.ImportRtList) > 0 {
 			vrfDto.ImportRouteTargets = vrf.ImportRtList
@@ -38,13 +38,12 @@ func NewVPNv4Controller(injector evpnInjector, vrfCfg []oc.VrfConfig) *VPNv4Cont
 		rdVrfMap.Store(vrfDto.Rd, vrfDto)
 	}
 	return &VPNv4Controller{
-		evpnInjector: injector,
-		rdVrfMap: rdVrfMap,
+		evpnInjector:      injector,
+		rdVrfMap:          rdVrfMap,
 		redistributedEvpn: xsync.NewMap[vpnRoute, uuid.UUID](),
-		routeGen: newEvpnRouteGen(),
+		routeGen:          newEvpnRouteGen(),
 	}
 }
-
 
 func (c *VPNv4Controller) HandleUpdate(path *api.Path) error {
 	route, err := vpnFromApi(path.GetNlri())
@@ -85,13 +84,12 @@ func (c *VPNv4Controller) HandleWithdraw(path *api.Path) error {
 	return nil
 }
 
-
 // Handles updates and withdrawals of EVPN routes
 type EvpnController struct {
 	vpnInjector      vpnInjector
-	existingRT    mapset.Set[string]
+	existingRT       mapset.Set[string]
 	redistributedVpn *xsync.Map[evpnRoute, uuid.UUID]
-	routeGen          *vpnRouteGen
+	routeGen         *vpnRouteGen
 }
 
 func NewEvpnController(injector vpnInjector, vrfCfg []oc.VrfConfig) *EvpnController {
@@ -100,16 +98,16 @@ func NewEvpnController(injector vpnInjector, vrfCfg []oc.VrfConfig) *EvpnControl
 		existingRt.Append(vrf.ImportRtList...)
 	}
 	return &EvpnController{
-		vpnInjector: injector,
-		existingRT: existingRt,
+		vpnInjector:      injector,
+		existingRT:       existingRt,
 		redistributedVpn: &xsync.Map[evpnRoute, uuid.UUID]{},
-		routeGen: newVpnRouteGen(),
+		routeGen:         newVpnRouteGen(),
 	}
 }
 
 func (c *EvpnController) HandleUpdate(path *api.Path) error {
 	route, err := evpnFromApi(path.GetNlri())
-	if errors.Is(err, invalidEvpnType) {  // TODO: conditionally support Type-2
+	if errors.Is(err, invalidEvpnType) { // TODO: conditionally support Type-2
 		return nil
 	}
 	if err != nil {
@@ -128,8 +126,8 @@ func (c *EvpnController) HandleUpdate(path *api.Path) error {
 		c.vpnInjector.DelRoute(prevUuid) // implicit withdraw
 	}
 	c.redistributedVpn.Store(route, vpnUuid)
+	return nil
 }
-
 
 func (c *EvpnController) HandleWithdraw(path *api.Path) error {
 	route, err := evpnFromApi(path.GetNlri())

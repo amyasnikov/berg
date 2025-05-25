@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"os"
-	"syscall"
 	"os/signal"
+	"syscall"
 
 	"github.com/amyasnikov/berg/internal/app"
 	"github.com/osrg/gobgp/v3/pkg/config"
@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
-
 
 func main() {
 	var logger = logrus.New()
@@ -51,8 +50,8 @@ func main() {
 	go berg.Serve(ctx)
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-    sig := <- sigCh
-    logger.Info("Received %s — shutting down.", sig)
+	sig := <-sigCh
+	logger.Info("Received %s — shutting down.", sig)
 	stopBerg()
 	bgpServer.Stop()
 }

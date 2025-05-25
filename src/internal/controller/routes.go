@@ -10,31 +10,28 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-
 var invalidEvpnType = errors.New("invalid EVPN type")
 
 type ipv4RouteId struct {
 	Uuid uuid.UUID
-	Vrf string
+	Vrf  string
 }
 
 type ipv4Route struct {
-	Prefix string
+	Prefix    string
 	Prefixlen uint32
-	Vrf string
+	Vrf       string
 }
-
 
 type evpnRoute struct {
-	Rd string
-	Prefix string
-	Prefixlen uint32
-	Gateway string
-	Label uint32
-	EthernetTag uint32	
-	Esi string
+	Rd          string
+	Prefix      string
+	Prefixlen   uint32
+	Gateway     string
+	Label       uint32
+	EthernetTag uint32
+	Esi         string
 }
-
 
 func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	var route api.EVPNIPPrefixRoute
@@ -56,18 +53,16 @@ func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	return result, nil
 }
 
-
 type vpnRoute struct {
-	Rd string
-	Prefix string
+	Rd        string
+	Prefix    string
 	Prefixlen uint32
-	Label uint32
+	Label     uint32
 }
 
 func (r vpnRoute) String() string {
 	return fmt.Sprintf("%s:%s/%d", r.Rd, r.Prefix, r.Prefixlen)
 }
-
 
 func vpnFromApi(apiRoute *anypb.Any) (vpnRoute, error) {
 	var route api.LabeledVPNIPAddressPrefix

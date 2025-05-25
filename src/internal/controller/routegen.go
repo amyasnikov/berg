@@ -1,15 +1,11 @@
 package controller
 
 import (
-
 	"github.com/amyasnikov/berg/internal/dto"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
-
-
-
 
 type evpnRouteGen struct {
 	attrFilter *AttrFilter
@@ -53,11 +49,9 @@ func (g *evpnRouteGen) GenRoute(route vpnRoute, vrf dto.Vrf, pattrs []*anypb.Any
 	return
 }
 
-
 type vpnRouteGen struct {
 	attrFilter *AttrFilter
 }
-
 
 func newVpnRouteGen() *vpnRouteGen {
 	allowedAttrs := []proto.Message{

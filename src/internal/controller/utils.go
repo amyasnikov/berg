@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -10,8 +10,7 @@ import (
 
 var invalidRD = errors.New("invalid RD")
 
-
-func extractRouteTargets(pattrs []*anypb.Any) []string{
+func extractRouteTargets(pattrs []*anypb.Any) []string {
 	routeTargets := []string{}
 	var commAttr api.ExtendedCommunitiesAttribute
 	var com1 api.TwoOctetAsSpecificExtended
@@ -52,7 +51,6 @@ func extractRd(rd *anypb.Any) (string, error) {
 	return "", invalidRD
 }
 
-
 func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 	var nlri api.MpReachNLRIAttribute
 	for _, attr := range pattrs {
@@ -63,7 +61,7 @@ func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 				)
 			}
 			return nlri.NextHops[1], nil
-    	}
-  	}
+		}
+	}
 	return "", fmt.Errorf("no nexthop was found for route %s", route.String())
 }

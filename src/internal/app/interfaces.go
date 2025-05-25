@@ -11,13 +11,11 @@ type controller interface {
 	HandleWithdraw(path *api.Path) error
 }
 
-
 type bgpServer interface {
 	AddPath(context.Context, *api.AddPathRequest) (*api.AddPathResponse, error)
 	DeletePath(context.Context, *api.DeletePathRequest) error
 	WatchEvent(context.Context, *api.WatchEventRequest, func(*api.WatchEventResponse)) error
 }
-
 
 type logger interface {
 	Info(...interface{})

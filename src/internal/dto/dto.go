@@ -4,39 +4,36 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-
 type IPv4Route struct {
-	Prefix string
+	Prefix    string
 	Prefixlen uint32
-	Nexthop string
+	Nexthop   string
 	PathAttrs []*anypb.Any
-	Vrf string
+	Vrf       string
 }
-
 
 type Evpn5Route struct {
-	Rd string
+	Rd           string
 	RouteTargets []string
-	Prefix string
-	Prefixlen uint32
-	Gateway string
-	Vni uint32
-	PathAttrs []*anypb.Any
+	Prefix       string
+	Prefixlen    uint32
+	Gateway      string
+	Vni          uint32
+	PathAttrs    []*anypb.Any
 }
 
-
 type VPNRoute struct {
-	Rd string
+	Rd           string
 	RouteTargets []string
-	Prefix string
-	Prefixlen uint32
-	PathAttrs []*anypb.Any
+	Prefix       string
+	Prefixlen    uint32
+	PathAttrs    []*anypb.Any
 }
 
 type Vrf struct {
-	Name string
-	Rd string
+	Name               string
+	Rd                 string
 	ExportRouteTargets []string
 	ImportRouteTargets []string
-	Vni uint32
+	Vni                uint32
 }

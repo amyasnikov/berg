@@ -1,15 +1,12 @@
 package controller
 
-
 import (
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
-
 
 type AttrFilter struct {
 	includeAttrs []proto.Message
-	
 }
 
 func (f *AttrFilter) Filter(attrs []*anypb.Any) []*anypb.Any {

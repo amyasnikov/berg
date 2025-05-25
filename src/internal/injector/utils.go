@@ -93,10 +93,9 @@ func mustAny(m proto.Message) *anypb.Any {
 	return a
 }
 
-
 func delRoute(server bgpServer, uuid uuid.UUID, family *api.Family) error {
 	binUuid, _ := uuid.MarshalBinary()
-    delReq := &api.DeletePathRequest{
+	delReq := &api.DeletePathRequest{
 		Family: family,
 		Path: &api.Path{
 			Uuid: binUuid,

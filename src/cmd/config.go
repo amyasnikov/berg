@@ -1,18 +1,17 @@
 package main
 
 import (
-	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/osrg/gobgp/v3/pkg/config"
+	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	flag "github.com/spf13/pflag"
 )
 
 type Config struct {
 	GobgpConfig *oc.BgpConfigSet
-	ConfigFile string
-	GrpcHosts string
-	LogLevel string
+	ConfigFile  string
+	GrpcHosts   string
+	LogLevel    string
 }
-
 
 func NewConfig() (cfg Config) {
 	configFile := flag.StringP("config", "f", "", "Path to TOML config file")

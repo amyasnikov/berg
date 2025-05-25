@@ -12,11 +12,11 @@ import (
 
 type App struct {
 	config         *oc.BgpConfigSet
-	vpnController controller
+	vpnController  controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
 	bgpServer      bgpServer
-	logger logger
+	logger         logger
 }
 
 func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger logger) *App {
@@ -33,12 +33,12 @@ func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger
 	vpnController := ctrl.NewVPNv4Controller(evpnInjector, vrfConfig)
 	evpnController := ctrl.NewEvpnController(vpnInjector, vrfConfig)
 	return &App{
-		config: config,
-		vpnController: vpnController,
+		config:         config,
+		vpnController:  vpnController,
 		evpnController: evpnController,
-		eventChan: make(chan *api.WatchEventResponse, bufsize),
-		bgpServer: bgpServer,
-		logger: logger,
+		eventChan:      make(chan *api.WatchEventResponse, bufsize),
+		bgpServer:      bgpServer,
+		logger:         logger,
 	}
 }
 
@@ -87,7 +87,7 @@ func (a *App) Serve(ctx context.Context) {
 	watchReq := &api.WatchEventRequest{
 		Table: &api.WatchEventRequest_Table{
 			Filters: []*api.WatchEventRequest_Table_Filter{
-				&api.WatchEventRequest_Table_Filter{
+				{
 					Type: api.WatchEventRequest_Table_Filter_POST_POLICY,
 					Init: true,
 				},
