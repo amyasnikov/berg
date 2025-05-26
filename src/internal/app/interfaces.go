@@ -16,8 +16,3 @@ type bgpServer interface {
 	DeletePath(context.Context, *api.DeletePathRequest) error
 	WatchEvent(context.Context, *api.WatchEventRequest, func(*api.WatchEventResponse)) error
 }
-
-type logger interface {
-	Info(...interface{})
-	Error(...interface{})
-}

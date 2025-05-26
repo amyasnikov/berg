@@ -100,7 +100,7 @@ func NewEvpnController(injector vpnInjector, vrfCfg []oc.VrfConfig) *EvpnControl
 	return &EvpnController{
 		vpnInjector:      injector,
 		existingRT:       existingRt,
-		redistributedVpn: &xsync.Map[evpnRoute, uuid.UUID]{},
+		redistributedVpn: xsync.NewMap[evpnRoute, uuid.UUID](),
 		routeGen:         newVpnRouteGen(),
 	}
 }
@@ -118,6 +118,7 @@ func (c *EvpnController) HandleUpdate(path *api.Path) error {
 		return nil
 	}
 	vpnRoute := c.routeGen.GenRoute(route, path.GetPattrs())
+	vpnRoute.RouteTargets = routeTargets
 	vpnUuid, err := c.vpnInjector.AddRoute(vpnRoute)
 	if err != nil {
 		return err

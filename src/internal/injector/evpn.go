@@ -19,16 +19,19 @@ func NewEvpnInjector(s bgpServer) *EvpnInjector {
 }
 
 func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
-	rd := mustParseRD(route.Rd)
+	rd, err := parseRD(route.Rd)
+	if err != nil {
+		return uuid.Nil, err
+	}
 
-	nlri := mustAny(&api.EVPNIPPrefixRoute{
+	nlri, _ := anypb.New(&api.EVPNIPPrefixRoute{
 		Rd:          rd,
 		Esi:         &api.EthernetSegmentIdentifier{},
 		EthernetTag: 0,
 		IpPrefix:    route.Prefix,
 		IpPrefixLen: route.Prefixlen,
 		GwAddress:   route.Gateway,
-		Label:       uint32(route.Vni),
+		Label:       route.Vni,
 	})
 	extcomms := make([]*anypb.Any, 0, len(route.RouteTargets)+1)
 	var merr error
@@ -40,11 +43,12 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
 	if merr != nil {
 		return uuid.Nil, merr
 	}
-	encap := mustAny(&api.EncapExtended{TunnelType: 1}) // VXLAN encap
+	encap, _ := anypb.New(&api.EncapExtended{TunnelType: 8}) // VXLAN encap
 	extcommAttr, _ := anypb.New(&api.ExtendedCommunitiesAttribute{
 		Communities: append(extcomms, encap),
 	})
-	pattrs := append(route.PathAttrs, extcommAttr)
+	nh , _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
+	pattrs := append(route.PathAttrs, extcommAttr, nh)
 	req := &api.AddPathRequest{
 		Path: &api.Path{
 			Family: &api.Family{

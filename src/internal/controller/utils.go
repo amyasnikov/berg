@@ -42,11 +42,11 @@ func extractRd(rd *anypb.Any) (string, error) {
 	rd2 := api.RouteDistinguisherFourOctetASN{}
 	rd3 := api.RouteDistinguisherIPAddress{}
 	if err := rd.UnmarshalTo(&rd1); err == nil {
-		return rd1.String(), nil
+		return fmt.Sprintf("%v:%v", rd1.Admin, rd1.Assigned), nil
 	} else if err = rd.UnmarshalTo(&rd2); err == nil {
-		return rd2.String(), nil
+		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
 	} else if err = rd.UnmarshalTo(&rd3); err == nil {
-		return rd3.String(), nil
+		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
 	}
 	return "", invalidRD
 }
@@ -60,7 +60,7 @@ func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 					"found %d NextHops for route %s, while 1 was expected", nhcount, route.String(),
 				)
 			}
-			return nlri.NextHops[1], nil
+			return nlri.NextHops[0], nil
 		}
 	}
 	return "", fmt.Errorf("no nexthop was found for route %s", route.String())

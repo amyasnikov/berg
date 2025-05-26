@@ -2,12 +2,12 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	ctrl "github.com/amyasnikov/berg/internal/controller"
 	"github.com/amyasnikov/berg/internal/injector"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
+	"github.com/sirupsen/logrus"
 )
 
 type App struct {
@@ -16,10 +16,10 @@ type App struct {
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
 	bgpServer      bgpServer
-	logger         logger
+	logger         *logrus.Logger
 }
 
-func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger logger) *App {
+func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger *logrus.Logger) *App {
 	vpnInjector := injector.NewVPNv4Injector(bgpServer)
 	evpnInjector := injector.NewEvpnInjector(bgpServer)
 	neighborConfig := make([]oc.NeighborConfig, 0, len(config.Neighbors))
@@ -56,12 +56,12 @@ func (a *App) receiver(ctx context.Context) {
 				return
 			}
 			for _, path := range resp.GetTable().GetPaths() {
-				if path.NeighborIp == "" { // locally originated path
+				if path.NeighborIp == "" || path.NeighborIp == "<nil>" { // locally originated path
 					continue
 				}
 				family := path.GetFamily()
 				switch {
-				case family.Afi == api.Family_AFI_IP && family.Safi == api.Family_SAFI_UNICAST:
+				case family.Afi == api.Family_AFI_IP && family.Safi == api.Family_SAFI_MPLS_VPN:
 					a.handlePath(a.vpnController, path)
 				case family.Afi == api.Family_AFI_L2VPN && family.Safi == api.Family_SAFI_EVPN:
 					a.handlePath(a.evpnController, path)
@@ -72,6 +72,9 @@ func (a *App) receiver(ctx context.Context) {
 }
 
 func (a *App) handlePath(controller controller, path *api.Path) {
+	if a.logger.IsLevelEnabled(logrus.DebugLevel) {
+		a.logger.WithFields(logrus.Fields{"path": path.String()}).Debug("received path")
+	}
 	var handler func(*api.Path) error
 	if path.IsWithdraw {
 		handler = controller.HandleWithdraw
@@ -88,7 +91,7 @@ func (a *App) Serve(ctx context.Context) {
 		Table: &api.WatchEventRequest_Table{
 			Filters: []*api.WatchEventRequest_Table_Filter{
 				{
-					Type: api.WatchEventRequest_Table_Filter_POST_POLICY,
+					Type: api.WatchEventRequest_Table_Filter_BEST,
 					Init: true,
 				},
 			},

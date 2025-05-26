@@ -1,0 +1,15 @@
+FROM jauderho/gobgp:v3.37.0 AS fetcher
+
+FROM golang:1.24-bookworm
+
+WORKDIR /berg
+
+COPY --from=fetcher /usr/local/bin/gobgp /bin/
+COPY src/ /build/
+COPY labs/docker/aliases.sh /tmp
+RUN CGO_ENABLED=0 go install -ldflags "-s -w -extldflags '-static'" github.com/go-delve/delve/cmd/dlv@latest \
+    && cd /build \
+    && go build -gcflags "all=-N -l" -o /berg/berg ./cmd \
+    && cat /tmp/aliases.sh >> /etc/bash.bashrc
+
+CMD  /go/bin/dlv --listen=:4000 --headless=true --log=true --api-version=2 exec ./berg -- -f config.toml

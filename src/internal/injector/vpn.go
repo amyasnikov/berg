@@ -20,13 +20,16 @@ func NewVPNv4Injector(s bgpServer) *VPNInjector {
 }
 
 func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
-	rd := mustParseRD(route.Rd)
+	rd, err := parseRD(route.Rd)
+	if err != nil {
+		return uuid.Nil, err
+	}
 
-	nlri := mustAny(&api.LabeledVPNIPAddressPrefix{
+	nlri, _ := anypb.New(&api.LabeledVPNIPAddressPrefix{
 		Rd:        rd,
 		Prefix:    route.Prefix,
 		PrefixLen: route.Prefixlen,
-		Labels:    []uint32{},
+		Labels:    []uint32{0},
 	})
 	extcomms := make([]*anypb.Any, 0, len(route.RouteTargets))
 	var merr error
@@ -41,7 +44,8 @@ func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
 	extcommAttr, _ := anypb.New(&api.ExtendedCommunitiesAttribute{
 		Communities: extcomms,
 	})
-	pattrs := append(route.PathAttrs, extcommAttr)
+	nh , _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
+	pattrs := append(route.PathAttrs, extcommAttr, nh)
 	req := &api.AddPathRequest{
 		Path: &api.Path{
 			Family: &api.Family{

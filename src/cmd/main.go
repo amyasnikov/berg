@@ -24,6 +24,8 @@ func main() {
 		logger.SetLevel(logrus.DebugLevel)
 	case "info":
 		logger.SetLevel(logrus.InfoLevel)
+	case "error":
+		logger.SetLevel(logrus.ErrorLevel)
 	default:
 		logger.SetLevel(logrus.InfoLevel)
 	}

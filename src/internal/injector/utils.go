@@ -37,13 +37,6 @@ func parseRD(rdStr string) (*anypb.Any, error) {
 	}
 }
 
-func mustParseRD(rdStr string) *anypb.Any {
-	rd, err := parseRD(rdStr)
-	if err != nil {
-		panic(err)
-	}
-	return rd
-}
 
 func parseRT(rtStr string) (*anypb.Any, error) {
 	raw, err := bgp.ParseRouteTarget(rtStr)
@@ -78,28 +71,35 @@ func parseRT(rtStr string) (*anypb.Any, error) {
 		return nil, fmt.Errorf("unsupported RT type %T", v)
 	}
 
-	anyRT, err := anypb.New(msg.(*anypb.Any))
+	anyRT, err := anypb.New(msg.(proto.Message))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal RT %q: %w", rtStr, err)
 	}
 	return anyRT, nil
 }
 
-func mustAny(m proto.Message) *anypb.Any {
-	a, err := anypb.New(m)
-	if err != nil {
-		panic(err)
-	}
-	return a
-}
-
 func delRoute(server bgpServer, uuid uuid.UUID, family *api.Family) error {
+	var nlri *anypb.Any
+	rd, _ := anypb.New(&api.RouteDistinguisherTwoOctetASN{})
+	if family.Safi == api.Family_SAFI_MPLS_VPN {
+		nlri, _ = anypb.New(&api.LabeledVPNIPAddressPrefix{Rd: rd})
+	} else if family.Safi == api.Family_SAFI_EVPN {
+		nlri, _ = anypb.New(&api.EVPNIPPrefixRoute{Rd: rd, Esi: &api.EthernetSegmentIdentifier{Value: []byte{}}})
+	} else {
+		return fmt.Errorf("Unknown family %s", family.String())
+	}
+	nh, _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
 	binUuid, _ := uuid.MarshalBinary()
 	delReq := &api.DeletePathRequest{
+		Uuid: binUuid,
 		Family: family,
 		Path: &api.Path{
 			Uuid: binUuid,
+			Family: family,
+			Nlri: nlri,
+			Pattrs: []*anypb.Any{nh},
 		},
+
 	}
 
 	if err := server.DeletePath(context.TODO(), delReq); err != nil {

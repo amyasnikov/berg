@@ -33,6 +33,10 @@ type evpnRoute struct {
 	Esi         string
 }
 
+func (r evpnRoute) String() string {
+	return fmt.Sprintf("5:%s:%s/%d Gw:%s Vni:%d", r.Rd, r.Prefix, r.Prefixlen, r.Gateway, r.Label)
+}
+
 func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	var route api.EVPNIPPrefixRoute
 	err := anypb.UnmarshalTo(apiRoute, &route, proto.UnmarshalOptions{})

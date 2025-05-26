@@ -8,6 +8,8 @@ services:
         ipv4_address: 10.5.0.100
     volumes:
       - ${PWD}/berg.toml:/berg/config.toml
+    ports:
+      - "4000:4000"
 
   g1:
     image: jauderho/gobgp:v3.37.0
