@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	ctrl "github.com/amyasnikov/berg/internal/controller"
 	"github.com/amyasnikov/berg/internal/injector"
@@ -11,34 +12,28 @@ import (
 )
 
 type App struct {
-	config         *oc.BgpConfigSet
 	vpnController  controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
+	controlChan chan appMessage
 	bgpServer      bgpServer
 	logger         *logrus.Logger
+	vrfCfg []oc.VrfConfig
 }
 
-func NewApp(config *oc.BgpConfigSet, bgpServer bgpServer, bufsize uint64, logger *logrus.Logger) *App {
+func NewApp(vrfConfig []oc.VrfConfig, bgpServer bgpServer, bufsize uint64, logger *logrus.Logger) *App {
 	vpnInjector := injector.NewVPNv4Injector(bgpServer)
 	evpnInjector := injector.NewEvpnInjector(bgpServer)
-	neighborConfig := make([]oc.NeighborConfig, 0, len(config.Neighbors))
-	for _, neighbor := range config.Neighbors {
-		neighborConfig = append(neighborConfig, neighbor.Config)
-	}
-	vrfConfig := make([]oc.VrfConfig, 0, len(config.Vrfs))
-	for _, vrf := range config.Vrfs {
-		vrfConfig = append(vrfConfig, vrf.Config)
-	}
 	vpnController := ctrl.NewVPNv4Controller(evpnInjector, vrfConfig)
 	evpnController := ctrl.NewEvpnController(vpnInjector, vrfConfig)
 	return &App{
-		config:         config,
 		vpnController:  vpnController,
 		evpnController: evpnController,
 		eventChan:      make(chan *api.WatchEventResponse, bufsize),
+		controlChan: make(chan appMessage, 1),
 		bgpServer:      bgpServer,
 		logger:         logger,
+		vrfCfg: vrfConfig,
 	}
 }
 
@@ -46,11 +41,19 @@ func (a *App) sender(resp *api.WatchEventResponse) {
 	a.eventChan <- resp
 }
 
-func (a *App) receiver(ctx context.Context) {
+func (a *App) receiver() {
 	for {
 		select {
-		case <-ctx.Done():
-			return
+		case msg := <- a.controlChan:
+			switch msg {
+			case stopAppMsg:
+				return
+			case reloadConfigMsg:
+				a.evpnController.ReloadConfig(a.vrfCfg)
+				a.vpnController.ReloadConfig(a.vrfCfg)
+			default:
+				a.logger.Error(fmt.Sprintf("Invalid message from controlChan: ", msg))
+			}
 		case resp, ok := <-a.eventChan:
 			if !ok {
 				return
@@ -98,7 +101,16 @@ func (a *App) Serve(ctx context.Context) {
 		},
 	}
 	a.bgpServer.WatchEvent(ctx, watchReq, a.sender)
-	go a.receiver(ctx)
+	go func ()  {
+		<- ctx.Done()
+		close(a.controlChan)
+	}()
+	go a.receiver()
 	<-ctx.Done()
 	close(a.eventChan)
+}
+
+func (a *App) ReloadConfig(config []oc.VrfConfig) {
+	a.vrfCfg = config
+	a.controlChan <- reloadConfigMsg
 }

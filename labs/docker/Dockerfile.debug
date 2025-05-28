@@ -12,4 +12,4 @@ RUN CGO_ENABLED=0 go install -ldflags "-s -w -extldflags '-static'" github.com/g
     && go build -gcflags "all=-N -l" -o /berg/berg ./cmd \
     && cat /tmp/aliases.sh >> /etc/bash.bashrc
 
-CMD  /go/bin/dlv --listen=:4000 --headless=true --log=true --api-version=2 exec ./berg -- -f config.toml
+CMD  /go/bin/dlv --listen=:4000 --headless=true --log=true --api-version=2 exec ./berg -- -f /config/berg.toml

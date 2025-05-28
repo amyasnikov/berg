@@ -1,14 +1,15 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/amyasnikov/berg/internal/dto"
 	api "github.com/osrg/gobgp/v3/api"
+	"github.com/osrg/gobgp/v3/pkg/config/oc"
+	"github.com/puzpuzpuz/xsync/v4"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
-
-var invalidRD = errors.New("invalid RD")
 
 func extractRouteTargets(pattrs []*anypb.Any) []string {
 	routeTargets := []string{}
@@ -37,20 +38,6 @@ func extractRouteTargets(pattrs []*anypb.Any) []string {
 	return routeTargets
 }
 
-func extractRd(rd *anypb.Any) (string, error) {
-	rd1 := api.RouteDistinguisherTwoOctetASN{}
-	rd2 := api.RouteDistinguisherFourOctetASN{}
-	rd3 := api.RouteDistinguisherIPAddress{}
-	if err := rd.UnmarshalTo(&rd1); err == nil {
-		return fmt.Sprintf("%v:%v", rd1.Admin, rd1.Assigned), nil
-	} else if err = rd.UnmarshalTo(&rd2); err == nil {
-		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
-	} else if err = rd.UnmarshalTo(&rd3); err == nil {
-		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
-	}
-	return "", invalidRD
-}
-
 func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 	var nlri api.MpReachNLRIAttribute
 	for _, attr := range pattrs {
@@ -64,4 +51,26 @@ func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no nexthop was found for route %s", route.String())
+}
+
+
+func makeRdVrfMap(vrfCfg []oc.VrfConfig) *xsync.Map[string, dto.Vrf] {
+	rdVrfMap := xsync.NewMap[string, dto.Vrf]()
+	for _, vrf := range vrfCfg {
+		vrfDto := dto.Vrf{
+			Name:               vrf.Name,
+			Rd:                 vrf.Rd,
+			ImportRouteTargets: vrf.BothRtList,
+			ExportRouteTargets: vrf.BothRtList,
+			Vni:                vrf.Id,
+		}
+		if len(vrf.ImportRtList) > 0 {
+			vrfDto.ImportRouteTargets = vrf.ImportRtList
+		}
+		if len(vrf.ExportRtList) > 0 {
+			vrfDto.ExportRouteTargets = vrf.ExportRtList
+		}
+		rdVrfMap.Store(vrfDto.Rd, vrfDto)
+	}
+	return rdVrfMap
 }

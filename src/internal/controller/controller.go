@@ -20,26 +20,9 @@ type VPNv4Controller struct {
 }
 
 func NewVPNv4Controller(injector evpnInjector, vrfCfg []oc.VrfConfig) *VPNv4Controller {
-	rdVrfMap := xsync.NewMap[string, dto.Vrf]()
-	for _, vrf := range vrfCfg {
-		vrfDto := dto.Vrf{
-			Name:               vrf.Name,
-			Rd:                 vrf.Rd,
-			ImportRouteTargets: vrf.BothRtList,
-			ExportRouteTargets: vrf.BothRtList,
-			Vni:                vrf.Id,
-		}
-		if len(vrf.ImportRtList) > 0 {
-			vrfDto.ImportRouteTargets = vrf.ImportRtList
-		}
-		if len(vrf.ExportRtList) > 0 {
-			vrfDto.ExportRouteTargets = vrf.ExportRtList
-		}
-		rdVrfMap.Store(vrfDto.Rd, vrfDto)
-	}
 	return &VPNv4Controller{
 		evpnInjector:      injector,
-		rdVrfMap:          rdVrfMap,
+		rdVrfMap:          makeRdVrfMap(vrfCfg),
 		redistributedEvpn: xsync.NewMap[vpnRoute, uuid.UUID](),
 		routeGen:          newEvpnRouteGen(),
 	}
@@ -83,6 +66,11 @@ func (c *VPNv4Controller) HandleWithdraw(path *api.Path) error {
 	}
 	return nil
 }
+
+func (c *VPNv4Controller) ReloadConfig(vrfCfg []oc.VrfConfig) {
+	c.rdVrfMap = makeRdVrfMap(vrfCfg)
+}
+
 
 // Handles updates and withdrawals of EVPN routes
 type EvpnController struct {
@@ -143,4 +131,13 @@ func (c *EvpnController) HandleWithdraw(path *api.Path) error {
 		}
 	}
 	return nil
+}
+
+
+func (c *EvpnController) ReloadConfig(vrfCfg []oc.VrfConfig) {
+	existingRt := mapset.NewSet[string]()
+	for _, vrf := range vrfCfg {
+		existingRt.Append(vrf.ImportRtList...)
+	}
+	c.existingRT = existingRt	
 }

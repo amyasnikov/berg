@@ -12,4 +12,4 @@ RUN cd /build \
     && go build -o /berg/berg ./cmd \
     && cat /tmp/aliases.sh >> /etc/bash.bashrc
 
-CMD ./berg -f config.toml -l debug
+CMD ./berg -f /config/berg.toml -l debug

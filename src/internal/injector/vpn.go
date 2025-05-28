@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/types/known/anypb"
+	"github.com/amyasnikov/berg/internal/utils"
 )
 
 type VPNInjector struct {
@@ -20,7 +21,7 @@ func NewVPNv4Injector(s bgpServer) *VPNInjector {
 }
 
 func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
-	rd, err := parseRD(route.Rd)
+	rd, err := utils.RdToApi(route.Rd)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -34,7 +35,7 @@ func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
 	extcomms := make([]*anypb.Any, 0, len(route.RouteTargets))
 	var merr error
 	for _, rtString := range route.RouteTargets {
-		rt, err := parseRT(rtString)
+		rt, err := utils.RtToApi(rtString)
 		multierror.Append(merr, err)
 		extcomms = append(extcomms, rt)
 	}

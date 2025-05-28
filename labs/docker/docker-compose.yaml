@@ -7,7 +7,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.100
     volumes:
-      - ${PWD}/berg.toml:/berg/config.toml
+      - ${PWD}/config:/config
     ports:
       - "4000:4000"
 
@@ -17,7 +17,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.1
     volumes:
-      - ${PWD}/g1.toml:/config/gobgp.toml
+      - ${PWD}/config/g1.toml:/config/gobgp.toml
 
   g2:
     image: jauderho/gobgp:v3.37.0
@@ -25,7 +25,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.2
     volumes:
-      - ${PWD}/g2.toml:/config/gobgp.toml
+      - ${PWD}/config/g2.toml:/config/gobgp.toml
 
   g3:
     image: jauderho/gobgp:v3.37.0
@@ -33,7 +33,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.3
     volumes:
-      - ${PWD}/g3.toml:/config/gobgp.toml
+      - ${PWD}/config/g3.toml:/config/gobgp.toml
 
   g4:
     image: jauderho/gobgp:v3.37.0
@@ -41,7 +41,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.4
     volumes:
-      - ${PWD}/g4.toml:/config/gobgp.toml
+      - ${PWD}/config/g4.toml:/config/gobgp.toml
 
   g5:
     image: jauderho/gobgp:v3.37.0
@@ -49,7 +49,7 @@ services:
       vpcbr:
         ipv4_address: 10.5.0.5
     volumes:
-      - ${PWD}/g5.toml:/config/gobgp.toml
+      - ${PWD}/config/g5.toml:/config/gobgp.toml
 
 networks:
   vpcbr:

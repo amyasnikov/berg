@@ -4,11 +4,13 @@ import (
 	"context"
 
 	api "github.com/osrg/gobgp/v3/api"
+	"github.com/osrg/gobgp/v3/pkg/config/oc"
 )
 
 type controller interface {
 	HandleUpdate(path *api.Path) error
 	HandleWithdraw(path *api.Path) error
+	ReloadConfig([]oc.VrfConfig)
 }
 
 type bgpServer interface {

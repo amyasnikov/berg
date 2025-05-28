@@ -8,6 +8,7 @@ import (
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+	"github.com/amyasnikov/berg/internal/utils"
 )
 
 var invalidEvpnType = errors.New("invalid EVPN type")
@@ -50,7 +51,7 @@ func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	result.Label = route.Label
 	result.Prefix = route.IpPrefix
 	result.Prefixlen = route.IpPrefixLen
-	result.Rd, err = extractRd(route.Rd)
+	result.Rd, err = utils.RdToString(route.Rd)
 	if err != nil {
 		return evpnRoute{}, err
 	}
@@ -78,7 +79,7 @@ func vpnFromApi(apiRoute *anypb.Any) (vpnRoute, error) {
 	result.Label = route.Labels[0]
 	result.Prefix = route.Prefix
 	result.Prefixlen = route.PrefixLen
-	result.Rd, err = extractRd(route.Rd)
+	result.Rd, err = utils.RdToString(route.Rd)
 	if err != nil {
 		return vpnRoute{}, err
 	}

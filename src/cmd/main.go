@@ -18,7 +18,7 @@ func main() {
 	var logger = logrus.New()
 	logger.SetOutput(os.Stdout)
 	logger.SetFormatter(&logrus.JSONFormatter{})
-	opts := NewConfig()
+	opts := NewConfig(logger)
 	switch opts.LogLevel {
 	case "debug":
 		logger.SetLevel(logrus.DebugLevel)
@@ -38,7 +38,8 @@ func main() {
 		server.GrpcOption(grpcOpts),
 		server.LoggerOption(bgpLogger))
 	bufSize := 100000
-	berg := app.NewApp(opts.GobgpConfig, bgpServer, uint64(bufSize), logger)
+	vrfConfig := extractVrfConfig(opts.GobgpConfig.Vrfs)
+	berg := app.NewApp(vrfConfig, bgpServer, uint64(bufSize), logger)
 	ctx, stopBerg := context.WithCancel(context.Background())
 	go bgpServer.Serve()
 	_, err := config.InitialConfig(context.Background(), bgpServer, opts.GobgpConfig, false)
@@ -50,10 +51,34 @@ func main() {
 	}
 
 	go berg.Serve(ctx)
+	configChanged := opts.watchConfigChanges()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-	sig := <-sigCh
-	logger.Info("Received %s — shutting down.", sig)
-	stopBerg()
-	bgpServer.Stop()
+	stop := func (msg string, args ...any)  {
+		
+		logger.Error("cannot update config: %s", args)
+		stopBerg()
+		bgpServer.Stop()
+		os.Exit(1)
+	}
+	for {
+		select {
+		case sig := <-sigCh:
+			logger.Info("Received %s — shutting down.", sig)
+			stopBerg()
+			bgpServer.Stop()
+			return
+		case newConfig := <- configChanged:
+			createdVrfs, deletedVrfs := getVrfDiff(opts.GobgpConfig.Vrfs, newConfig.Vrfs)
+			err = applyVrfChanges(bgpServer, createdVrfs, deletedVrfs)
+			if err != nil {
+				stop("cannot update config: %s", err)
+			}
+			opts.GobgpConfig, err = config.UpdateConfig(context.Background(), bgpServer, opts.GobgpConfig, newConfig)
+			if err != nil {
+				stop("cannot update config: %s", err)
+			}
+			berg.ReloadConfig(extractVrfConfig(newConfig.Vrfs))
+		}
+	}
 }
