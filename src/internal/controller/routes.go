@@ -58,6 +58,12 @@ func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	return result, nil
 }
 
+
+type evpnRouteWithRT struct {
+	evpnRoute
+	RouteTargets []string
+}
+
 type vpnRoute struct {
 	Rd        string
 	Prefix    string

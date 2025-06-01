@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/amyasnikov/berg/internal/dto"
 	mapset "github.com/deckarep/golang-set/v2"
@@ -9,6 +10,7 @@ import (
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/puzpuzpuz/xsync/v4"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 // Handles updates and withdrawals of IPv4 routes
@@ -67,10 +69,44 @@ func (c *VPNv4Controller) HandleWithdraw(path *api.Path) error {
 	return nil
 }
 
-func (c *VPNv4Controller) ReloadConfig(vrfCfg []oc.VrfConfig) {
-	c.rdVrfMap = makeRdVrfMap(vrfCfg)
+func (c *VPNv4Controller) ReloadConfig(diff dto.VrfDiff) error {
+	deletedRd := make([]string, 0, len(diff.Deleted))
+	for _, vrf := range diff.Deleted {
+		c.rdVrfMap.Delete(vrf.Rd)
+		deletedRd = append(deletedRd, vrf.Rd)
+	}
+	for _, vrf := range diff.Created {
+		dtoVrf := dto.Vrf{
+			Name: vrf.Name,
+			Vni: vrf.Id,
+			Rd: vrf.Rd,
+			ImportRouteTargets: vrf.ImportRtList,
+			ExportRouteTargets: vrf.ExportRtList,
+		}
+		c.rdVrfMap.Store(dtoVrf.Rd, dtoVrf)
+	}
+	return c.deleteStaleRoutes(deletedRd)
 }
 
+
+func  (c *VPNv4Controller) deleteStaleRoutes(deletedRd []string) error {
+	wg := sync.WaitGroup{}
+	deletedSet := mapset.NewThreadUnsafeSet(deletedRd...)
+	var merr error
+	c.redistributedEvpn.Range(func(key vpnRoute, value uuid.UUID) bool {
+		if deletedSet.Contains() {
+			go func ()  {
+				wg.Add(1)
+				err := c.evpnInjector.DelRoute(value)
+				c.redistributedEvpn.Delete(key)
+				merr = multierror.Append(merr, err)
+			}()
+		}
+		wg.Wait()
+		return true
+	})
+	return merr
+}
 
 // Handles updates and withdrawals of EVPN routes
 type EvpnController struct {
@@ -78,6 +114,7 @@ type EvpnController struct {
 	existingRT       mapset.Set[string]
 	redistributedVpn *xsync.Map[evpnRoute, uuid.UUID]
 	routeGen         *vpnRouteGen
+	listAllEvpnRoutes func()  <- chan evpnRouteWithRT
 }
 
 func NewEvpnController(injector vpnInjector, vrfCfg []oc.VrfConfig) *EvpnController {
@@ -134,10 +171,18 @@ func (c *EvpnController) HandleWithdraw(path *api.Path) error {
 }
 
 
-func (c *EvpnController) ReloadConfig(vrfCfg []oc.VrfConfig) {
-	existingRt := mapset.NewSet[string]()
-	for _, vrf := range vrfCfg {
-		existingRt.Append(vrf.ImportRtList...)
+func (c *EvpnController) ReloadConfig(diff dto.VrfDiff) error {
+	// modify existingRT
+	deleteRT := []string{}
+	createRT := []string{}
+	for _, rt := range diff.Deleted {
+		deleteRT = append(deleteRT, rt.ImportRtList...)
 	}
-	c.existingRT = existingRt	
+	for _, rt := range diff.Created {
+		createRT = append(createRT, rt.ImportRtList...)
+	}
+	c.existingRT.RemoveAll(deleteRT...)
+	c.existingRT.Append(createRT...)
+
+	// 
 }

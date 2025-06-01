@@ -1,11 +1,18 @@
 package app
 
+import "github.com/amyasnikov/berg/internal/dto"
 
 
-type appMessage int
+
+type msgCode int
 
 
 const (
-	stopAppMsg appMessage = iota
+	stopAppMsg msgCode = iota
 	reloadConfigMsg
 )
+
+type message struct {
+	Code msgCode
+	VrfDiff *dto.VrfDiff
+}

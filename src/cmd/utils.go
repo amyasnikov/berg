@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"reflect"
 
+	"github.com/amyasnikov/berg/internal/dto"
 	"github.com/amyasnikov/berg/internal/utils"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
@@ -19,33 +19,20 @@ func extractVrfConfig(vrfs []oc.Vrf) []oc.VrfConfig {
 	return vrfConfig
 }
 
-func getVrfDiff(old, new []oc.Vrf) ([]oc.VrfConfig, []oc.VrfConfig) {
-	makeVrfMap := func(vrfs []oc.Vrf) map[uint32]oc.VrfConfig {
-		result := make(map[uint32]oc.VrfConfig, len(vrfs))
+
+func getVrfDiff(old, new []oc.Vrf) dto.VrfDiff {
+	getCfg := func(vrfs []oc.Vrf) []oc.VrfConfig {
+		configs := make([]oc.VrfConfig, 0, len(vrfs))
 		for _, vrf := range vrfs {
-			result[vrf.Config.Id] = vrf.Config
+			configs = append(configs, vrf.Config)
 		}
-		return result
+		return configs
 	}
-	oldVrfConfig := makeVrfMap(old)
-	newVrfConfig := makeVrfMap(new)
-	deleted := []oc.VrfConfig{}
-	created := []oc.VrfConfig{}
-	for vrfId, oldVrf := range oldVrfConfig {
-		newVrf, ok := newVrfConfig[vrfId]
-		if !ok {
-			deleted = append(deleted, oldVrf)
-		} else if !reflect.DeepEqual(oldVrf, newVrf) {
-			deleted = append(deleted, oldVrf)
-			created = append(created, newVrf)
-		}
-		delete(newVrfConfig, vrfId)
-	}
-	for _, newVrf := range newVrfConfig {
-		created = append(created, newVrf)
-	}
-	return created, deleted
+	oldcfg := getCfg(old)
+	newcfg := getCfg(new)
+	return utils.GetVrfDiff(oldcfg, newcfg)
 }
+
 
 func applyVrfChanges(bgpServer *server.BgpServer, created, deleted []oc.VrfConfig) error {
 	for _, vrf := range deleted {

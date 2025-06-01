@@ -51,7 +51,7 @@ func (c *Config) mustReadConfig() *oc.BgpConfigSet {
 
 func (c *Config)watchConfigChanges() <- chan *oc.BgpConfigSet {
 	ch := make(chan *oc.BgpConfigSet)
-	rateLimiter := rate.Sometimes{Interval: 100 * time.Millisecond}
+	rateLimiter := rate.Sometimes{Interval: 1 * time.Second}
 	config.WatchConfigFile(c.ConfigFile, "toml", func() {
 		rateLimiter.Do(func() {
 			c.logger.Info("Config changes detected, reloading configuration")

@@ -69,8 +69,8 @@ func main() {
 			bgpServer.Stop()
 			return
 		case newConfig := <- configChanged:
-			createdVrfs, deletedVrfs := getVrfDiff(opts.GobgpConfig.Vrfs, newConfig.Vrfs)
-			err = applyVrfChanges(bgpServer, createdVrfs, deletedVrfs)
+			vrfDiff := getVrfDiff(opts.GobgpConfig.Vrfs, newConfig.Vrfs)
+			err = applyVrfChanges(bgpServer, vrfDiff.Created, vrfDiff.Deleted)
 			if err != nil {
 				stop("cannot update config: %s", err)
 			}
@@ -78,7 +78,7 @@ func main() {
 			if err != nil {
 				stop("cannot update config: %s", err)
 			}
-			berg.ReloadConfig(extractVrfConfig(newConfig.Vrfs))
+			berg.ReloadConfig(vrfDiff)
 		}
 	}
 }

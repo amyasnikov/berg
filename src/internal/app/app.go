@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ctrl "github.com/amyasnikov/berg/internal/controller"
+	"github.com/amyasnikov/berg/internal/dto"
 	"github.com/amyasnikov/berg/internal/injector"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
@@ -15,10 +16,9 @@ type App struct {
 	vpnController  controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
-	controlChan chan appMessage
+	controlChan chan message
 	bgpServer      bgpServer
 	logger         *logrus.Logger
-	vrfCfg []oc.VrfConfig
 }
 
 func NewApp(vrfConfig []oc.VrfConfig, bgpServer bgpServer, bufsize uint64, logger *logrus.Logger) *App {
@@ -30,10 +30,9 @@ func NewApp(vrfConfig []oc.VrfConfig, bgpServer bgpServer, bufsize uint64, logge
 		vpnController:  vpnController,
 		evpnController: evpnController,
 		eventChan:      make(chan *api.WatchEventResponse, bufsize),
-		controlChan: make(chan appMessage, 1),
+		controlChan: make(chan message, 1),
 		bgpServer:      bgpServer,
 		logger:         logger,
-		vrfCfg: vrfConfig,
 	}
 }
 
@@ -45,12 +44,12 @@ func (a *App) receiver() {
 	for {
 		select {
 		case msg := <- a.controlChan:
-			switch msg {
+			switch msg.Code {
 			case stopAppMsg:
 				return
 			case reloadConfigMsg:
-				a.evpnController.ReloadConfig(a.vrfCfg)
-				a.vpnController.ReloadConfig(a.vrfCfg)
+				a.evpnController.ReloadConfig(*msg.VrfDiff)
+				a.vpnController.ReloadConfig(*msg.VrfDiff)
 			default:
 				a.logger.Error(fmt.Sprintf("Invalid message from controlChan: ", msg))
 			}
@@ -110,7 +109,9 @@ func (a *App) Serve(ctx context.Context) {
 	close(a.eventChan)
 }
 
-func (a *App) ReloadConfig(config []oc.VrfConfig) {
-	a.vrfCfg = config
-	a.controlChan <- reloadConfigMsg
+func (a *App) ReloadConfig(diff dto.VrfDiff) {
+	a.controlChan <- message{
+		Code: reloadConfigMsg,
+		VrfDiff: &diff,
+	}
 }

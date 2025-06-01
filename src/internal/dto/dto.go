@@ -1,16 +1,9 @@
 package dto
 
 import (
+	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"google.golang.org/protobuf/types/known/anypb"
 )
-
-type IPv4Route struct {
-	Prefix    string
-	Prefixlen uint32
-	Nexthop   string
-	PathAttrs []*anypb.Any
-	Vrf       string
-}
 
 type Evpn5Route struct {
 	Rd           string
@@ -36,4 +29,10 @@ type Vrf struct {
 	ExportRouteTargets []string
 	ImportRouteTargets []string
 	Vni                uint32
+}
+
+
+type VrfDiff struct {
+	Created []oc.VrfConfig
+	Deleted []oc.VrfConfig
 }
