@@ -7,10 +7,10 @@ import (
 	"github.com/amyasnikov/berg/internal/dto"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	multierror "github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 	"github.com/puzpuzpuz/xsync/v4"
-	multierror "github.com/hashicorp/go-multierror"
 )
 
 // Handles updates and withdrawals of IPv4 routes
@@ -77,9 +77,9 @@ func (c *VPNv4Controller) ReloadConfig(diff dto.VrfDiff) error {
 	}
 	for _, vrf := range diff.Created {
 		dtoVrf := dto.Vrf{
-			Name: vrf.Name,
-			Vni: vrf.Id,
-			Rd: vrf.Rd,
+			Name:               vrf.Name,
+			Vni:                vrf.Id,
+			Rd:                 vrf.Rd,
 			ImportRouteTargets: vrf.ImportRtList,
 			ExportRouteTargets: vrf.ExportRtList,
 		}
@@ -88,14 +88,13 @@ func (c *VPNv4Controller) ReloadConfig(diff dto.VrfDiff) error {
 	return c.deleteStaleRoutes(deletedRd)
 }
 
-
-func  (c *VPNv4Controller) deleteStaleRoutes(deletedRd []string) error {
+func (c *VPNv4Controller) deleteStaleRoutes(deletedRd []string) error {
 	wg := sync.WaitGroup{}
 	deletedSet := mapset.NewThreadUnsafeSet(deletedRd...)
 	var merr error
 	c.redistributedEvpn.Range(func(key vpnRoute, value uuid.UUID) bool {
 		if deletedSet.Contains() {
-			go func ()  {
+			go func() {
 				wg.Add(1)
 				err := c.evpnInjector.DelRoute(value)
 				c.redistributedEvpn.Delete(key)
@@ -110,23 +109,26 @@ func  (c *VPNv4Controller) deleteStaleRoutes(deletedRd []string) error {
 
 // Handles updates and withdrawals of EVPN routes
 type EvpnController struct {
-	vpnInjector      vpnInjector
-	existingRT       mapset.Set[string]
-	redistributedVpn *xsync.Map[evpnRoute, uuid.UUID]
-	routeGen         *vpnRouteGen
-	listAllEvpnRoutes func()  <- chan evpnRouteWithRT
+	vpnInjector          vpnInjector
+	existingRT           mapset.Set[string]
+	redistributedStorage *redistributedEvpnStorage
+	routeGen             *vpnRouteGen
+	listEvpnRoutes       func() <-chan EvpnRouteWithPattrs
 }
 
-func NewEvpnController(injector vpnInjector, vrfCfg []oc.VrfConfig) *EvpnController {
+func NewEvpnController(
+	injector vpnInjector, vrfCfg []oc.VrfConfig, listEvpnRoutes func() <-chan EvpnRouteWithPattrs,
+) *EvpnController {
 	existingRt := mapset.NewSet[string]()
 	for _, vrf := range vrfCfg {
 		existingRt.Append(vrf.ImportRtList...)
 	}
 	return &EvpnController{
-		vpnInjector:      injector,
-		existingRT:       existingRt,
-		redistributedVpn: xsync.NewMap[evpnRoute, uuid.UUID](),
-		routeGen:         newVpnRouteGen(),
+		vpnInjector:          injector,
+		existingRT:           existingRt,
+		redistributedStorage: newRedistributedEvpnStorage(),
+		routeGen:             newVpnRouteGen(),
+		listEvpnRoutes:       listEvpnRoutes,
 	}
 }
 
@@ -148,10 +150,10 @@ func (c *EvpnController) HandleUpdate(path *api.Path) error {
 	if err != nil {
 		return err
 	}
-	if prevUuid, _ := c.redistributedVpn.Load(route); prevUuid != uuid.Nil {
+	if prevUuid := c.redistributedStorage.Get(route); prevUuid != uuid.Nil {
 		c.vpnInjector.DelRoute(prevUuid) // implicit withdraw
 	}
-	c.redistributedVpn.Store(route, vpnUuid)
+	c.redistributedStorage.Store(route, routeTargets, vpnUuid)
 	return nil
 }
 
@@ -160,9 +162,9 @@ func (c *EvpnController) HandleWithdraw(path *api.Path) error {
 	if err != nil {
 		return err
 	}
-	vpnUuid, _ := c.redistributedVpn.Load(route)
-	if vpnUuid != uuid.Nil {
-		c.redistributedVpn.Delete(route)
+	if vpnUuid := c.redistributedStorage.Get(route); vpnUuid != uuid.Nil {
+		routeTargets := extractRouteTargets(path.GetPattrs())
+		c.redistributedStorage.Delete(route, routeTargets)
 		if err = c.vpnInjector.DelRoute(vpnUuid); err != nil {
 			return err
 		}
@@ -170,9 +172,8 @@ func (c *EvpnController) HandleWithdraw(path *api.Path) error {
 	return nil
 }
 
-
 func (c *EvpnController) ReloadConfig(diff dto.VrfDiff) error {
-	// modify existingRT
+	// modify c.existingRT
 	deleteRT := []string{}
 	createRT := []string{}
 	for _, rt := range diff.Deleted {
@@ -184,5 +185,33 @@ func (c *EvpnController) ReloadConfig(diff dto.VrfDiff) error {
 	c.existingRT.RemoveAll(deleteRT...)
 	c.existingRT.Append(createRT...)
 
-	// 
+	// delete old VPN routes
+	uuids := c.redistributedStorage.PopByRT(deleteRT)
+	var merr error
+	wg := sync.WaitGroup{}
+	for _, rid := range uuids {
+		rid := rid
+		go func() {
+			wg.Add(1)
+			err := c.vpnInjector.DelRoute(rid)
+			merr = multierror.Append(merr, err)
+		}()
+	}
+	wg.Wait()
+
+	// redistribute new vrfs
+	ch := c.listEvpnRoutes()
+	for route := range ch {
+		if rid := c.redistributedStorage.Get(route.Nlri); rid != uuid.Nil {
+			continue
+		}
+		if route.HasAnyTarget(createRT...) {
+			vpnRoute := c.routeGen.GenRoute(route.Nlri, route.Pattrs)
+			vpnRoute.RouteTargets = route.Targets.ToSlice()
+			rid, err := c.vpnInjector.AddRoute(vpnRoute)
+			merr = multierror.Append(merr, err)
+			c.redistributedStorage.Store(route.Nlri, route.Targets.ToSlice(), rid)
+		}
+	}
+	return merr
 }

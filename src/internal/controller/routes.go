@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/amyasnikov/berg/internal/utils"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"github.com/amyasnikov/berg/internal/utils"
 )
 
 var invalidEvpnType = errors.New("invalid EVPN type")
@@ -58,10 +59,27 @@ func evpnFromApi(apiRoute *anypb.Any) (evpnRoute, error) {
 	return result, nil
 }
 
+type EvpnRouteWithPattrs struct {
+	Nlri    evpnRoute
+	Pattrs  []*anypb.Any
+	Targets mapset.Set[string]
+}
 
-type evpnRouteWithRT struct {
-	evpnRoute
-	RouteTargets []string
+func NewEvpnRouteWithPattrs(path *api.Path) (EvpnRouteWithPattrs, error) {
+	route, err := evpnFromApi(path.GetNlri())
+	if err != nil {
+		return EvpnRouteWithPattrs{}, err
+	}
+	targets := extractRouteTargets(path.GetPattrs())
+	return EvpnRouteWithPattrs{
+		Nlri:    route,
+		Pattrs:  path.GetPattrs(),
+		Targets: mapset.NewSet(targets...),
+	}, nil
+}
+
+func (r *EvpnRouteWithPattrs) HasAnyTarget(targets ...string) bool {
+	return r.Targets.ContainsAny(targets...)
 }
 
 type vpnRoute struct {

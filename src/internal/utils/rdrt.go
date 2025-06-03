@@ -1,16 +1,16 @@
 package utils
 
 import (
-	api "github.com/osrg/gobgp/v3/api"
-	"google.golang.org/protobuf/types/known/anypb"
-	"fmt"
 	"errors"
+	"fmt"
+
+	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/packet/bgp"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var InvalidRD = errors.New("invalid RD")
-
 
 func RdToString(rd *anypb.Any) (string, error) {
 	rd1 := api.RouteDistinguisherTwoOctetASN{}
@@ -21,11 +21,10 @@ func RdToString(rd *anypb.Any) (string, error) {
 	} else if err = rd.UnmarshalTo(&rd2); err == nil {
 		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
 	} else if err = rd.UnmarshalTo(&rd3); err == nil {
-		return fmt.Sprintf("%v:%v", rd2.Admin, rd2.Assigned), nil
+		return fmt.Sprintf("%v:%v", rd3.Admin, rd3.Assigned), nil
 	}
 	return "", InvalidRD
 }
-
 
 func RdToApi(rdStr string) (*anypb.Any, error) {
 	rd, err := bgp.ParseRouteDistinguisher(rdStr)
@@ -52,7 +51,6 @@ func RdToApi(rdStr string) (*anypb.Any, error) {
 		return &anypb.Any{}, fmt.Errorf("unsupported RD type %T", v)
 	}
 }
-
 
 func RtToApi(rtStr string) (*anypb.Any, error) {
 	raw, err := bgp.ParseRouteTarget(rtStr)

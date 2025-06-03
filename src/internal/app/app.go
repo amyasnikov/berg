@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	ctrl "github.com/amyasnikov/berg/internal/controller"
 	"github.com/amyasnikov/berg/internal/dto"
@@ -16,7 +15,7 @@ type App struct {
 	vpnController  controller
 	evpnController controller
 	eventChan      chan *api.WatchEventResponse
-	controlChan chan message
+	controlChan    chan message
 	bgpServer      bgpServer
 	logger         *logrus.Logger
 }
@@ -25,12 +24,29 @@ func NewApp(vrfConfig []oc.VrfConfig, bgpServer bgpServer, bufsize uint64, logge
 	vpnInjector := injector.NewVPNv4Injector(bgpServer)
 	evpnInjector := injector.NewEvpnInjector(bgpServer)
 	vpnController := ctrl.NewVPNv4Controller(evpnInjector, vrfConfig)
-	evpnController := ctrl.NewEvpnController(vpnInjector, vrfConfig)
+	listRoutes := func() <-chan ctrl.EvpnRouteWithPattrs {
+		ch := make(chan ctrl.EvpnRouteWithPattrs)
+		req := api.ListPathRequest{
+			Family: &api.Family{Afi: api.Family_AFI_L2VPN, Safi: api.Family_SAFI_EVPN},
+		}
+		go bgpServer.ListPath(context.Background(), &req, func(d *api.Destination) {
+			for _, path := range d.GetPaths() {
+				route, err := ctrl.NewEvpnRouteWithPattrs(path)
+				if err != nil {
+					logger.Errorf("cannot parse evpn path %v: %w", path.Nlri, err)
+				}
+				ch <- route
+			}
+			close(ch)
+		})
+		return ch
+	}
+	evpnController := ctrl.NewEvpnController(vpnInjector, vrfConfig, listRoutes)
 	return &App{
 		vpnController:  vpnController,
 		evpnController: evpnController,
 		eventChan:      make(chan *api.WatchEventResponse, bufsize),
-		controlChan: make(chan message, 1),
+		controlChan:    make(chan message, 1),
 		bgpServer:      bgpServer,
 		logger:         logger,
 	}
@@ -43,15 +59,21 @@ func (a *App) sender(resp *api.WatchEventResponse) {
 func (a *App) receiver() {
 	for {
 		select {
-		case msg := <- a.controlChan:
+		case msg := <-a.controlChan:
 			switch msg.Code {
 			case stopAppMsg:
 				return
 			case reloadConfigMsg:
-				a.evpnController.ReloadConfig(*msg.VrfDiff)
+				err := a.evpnController.ReloadConfig(*msg.VrfDiff)
+				if err != nil {
+					a.logger.Errorf("error while evpn reloading: %w", err)
+				}
 				a.vpnController.ReloadConfig(*msg.VrfDiff)
+				if err != nil {
+					a.logger.Errorf("error while vpn reloading: %w", err)
+				}
 			default:
-				a.logger.Error(fmt.Sprintf("Invalid message from controlChan: ", msg))
+				a.logger.Errorf("Invalid message from controlChan: %v", msg)
 			}
 		case resp, ok := <-a.eventChan:
 			if !ok {
@@ -100,8 +122,8 @@ func (a *App) Serve(ctx context.Context) {
 		},
 	}
 	a.bgpServer.WatchEvent(ctx, watchReq, a.sender)
-	go func ()  {
-		<- ctx.Done()
+	go func() {
+		<-ctx.Done()
 		close(a.controlChan)
 	}()
 	go a.receiver()
@@ -111,7 +133,7 @@ func (a *App) Serve(ctx context.Context) {
 
 func (a *App) ReloadConfig(diff dto.VrfDiff) {
 	a.controlChan <- message{
-		Code: reloadConfigMsg,
+		Code:    reloadConfigMsg,
 		VrfDiff: &diff,
 	}
 }
