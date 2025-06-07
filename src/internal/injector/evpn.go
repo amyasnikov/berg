@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/amyasnikov/berg/internal/dto"
+	"github.com/amyasnikov/berg/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/types/known/anypb"
-	"github.com/amyasnikov/berg/internal/utils"
-
 )
 
 type EvpnInjector struct {
@@ -39,7 +38,9 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
 	var merr error
 	for _, rtString := range route.RouteTargets {
 		rt, err := utils.RtToApi(rtString)
-		multierror.Append(merr, err)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		}
 		extcomms = append(extcomms, rt)
 	}
 	if merr != nil {
@@ -49,7 +50,7 @@ func (c *EvpnInjector) AddType5Route(route dto.Evpn5Route) (uuid.UUID, error) {
 	extcommAttr, _ := anypb.New(&api.ExtendedCommunitiesAttribute{
 		Communities: append(extcomms, encap),
 	})
-	nh , _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
+	nh, _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
 	pattrs := append(route.PathAttrs, extcommAttr, nh)
 	req := &api.AddPathRequest{
 		Path: &api.Path{

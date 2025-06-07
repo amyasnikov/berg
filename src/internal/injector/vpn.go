@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/amyasnikov/berg/internal/dto"
+	"github.com/amyasnikov/berg/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	api "github.com/osrg/gobgp/v3/api"
 	"google.golang.org/protobuf/types/known/anypb"
-	"github.com/amyasnikov/berg/internal/utils"
 )
 
 type VPNInjector struct {
@@ -36,7 +36,9 @@ func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
 	var merr error
 	for _, rtString := range route.RouteTargets {
 		rt, err := utils.RtToApi(rtString)
-		multierror.Append(merr, err)
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		}
 		extcomms = append(extcomms, rt)
 	}
 	if merr != nil {
