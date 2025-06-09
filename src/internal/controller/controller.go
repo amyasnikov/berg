@@ -93,17 +93,20 @@ func (c *VPNv4Controller) deleteStaleRoutes(deletedRd []string) error {
 	deletedSet := mapset.NewThreadUnsafeSet(deletedRd...)
 	var merr error
 	c.redistributedEvpn.Range(func(key vpnRoute, value uuid.UUID) bool {
-		if deletedSet.Contains() {
+		if deletedSet.Contains(key.Rd) {
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				err := c.evpnInjector.DelRoute(value)
 				c.redistributedEvpn.Delete(key)
-				merr = multierror.Append(merr, err)
+				if err != nil {
+					merr = multierror.Append(merr, err)
+				}
+				wg.Done()
 			}()
 		}
-		wg.Wait()
 		return true
 	})
+	wg.Wait()
 	return merr
 }
 
@@ -191,10 +194,13 @@ func (c *EvpnController) ReloadConfig(diff dto.VrfDiff) error {
 	wg := sync.WaitGroup{}
 	for _, rid := range uuids {
 		rid := rid
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			err := c.vpnInjector.DelRoute(rid)
-			merr = multierror.Append(merr, err)
+			if err != nil {
+				merr = multierror.Append(merr, err)
+			}
+			wg.Done()
 		}()
 	}
 	wg.Wait()

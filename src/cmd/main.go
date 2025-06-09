@@ -54,9 +54,9 @@ func main() {
 	configChanged := opts.watchConfigChanges()
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
-	stop := func (msg string, args ...any)  {
-		
-		logger.Error("cannot update config: %s", args)
+	stop := func(msg string, args ...any) {
+
+		logger.Errorf(msg, args...)
 		stopBerg()
 		bgpServer.Stop()
 		os.Exit(1)
@@ -64,11 +64,11 @@ func main() {
 	for {
 		select {
 		case sig := <-sigCh:
-			logger.Info("Received %s — shutting down.", sig)
+			logger.Infof("Received %s — shutting down.", sig)
 			stopBerg()
 			bgpServer.Stop()
 			return
-		case newConfig := <- configChanged:
+		case newConfig := <-configChanged:
 			vrfDiff := getVrfDiff(opts.GobgpConfig.Vrfs, newConfig.Vrfs)
 			err = applyVrfChanges(bgpServer, vrfDiff.Created, vrfDiff.Deleted)
 			if err != nil {

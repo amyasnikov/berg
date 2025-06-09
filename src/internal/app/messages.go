@@ -2,10 +2,7 @@ package app
 
 import "github.com/amyasnikov/berg/internal/dto"
 
-
-
 type msgCode int
-
 
 const (
 	stopAppMsg msgCode = iota
@@ -13,6 +10,6 @@ const (
 )
 
 type message struct {
-	Code msgCode
+	Code    msgCode
 	VrfDiff *dto.VrfDiff
 }

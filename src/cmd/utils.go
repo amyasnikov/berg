@@ -7,9 +7,13 @@ import (
 	"github.com/amyasnikov/berg/internal/utils"
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
-	"github.com/osrg/gobgp/v3/pkg/server"
 	"google.golang.org/protobuf/types/known/anypb"
 )
+
+type VrfManager interface {
+	DeleteVrf(context.Context, *api.DeleteVrfRequest) error
+	AddVrf(context.Context, *api.AddVrfRequest) error
+}
 
 func extractVrfConfig(vrfs []oc.Vrf) []oc.VrfConfig {
 	vrfConfig := make([]oc.VrfConfig, 0, len(vrfs))
@@ -18,7 +22,6 @@ func extractVrfConfig(vrfs []oc.Vrf) []oc.VrfConfig {
 	}
 	return vrfConfig
 }
-
 
 func getVrfDiff(old, new []oc.Vrf) dto.VrfDiff {
 	getCfg := func(vrfs []oc.Vrf) []oc.VrfConfig {
@@ -33,8 +36,7 @@ func getVrfDiff(old, new []oc.Vrf) dto.VrfDiff {
 	return utils.GetVrfDiff(oldcfg, newcfg)
 }
 
-
-func applyVrfChanges(bgpServer *server.BgpServer, created, deleted []oc.VrfConfig) error {
+func applyVrfChanges(bgpServer VrfManager, created, deleted []oc.VrfConfig) error {
 	for _, vrf := range deleted {
 		req := api.DeleteVrfRequest{Name: vrf.Name}
 		bgpServer.DeleteVrf(context.Background(), &req)

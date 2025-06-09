@@ -47,7 +47,7 @@ func (c *VPNInjector) AddRoute(route dto.VPNRoute) (uuid.UUID, error) {
 	extcommAttr, _ := anypb.New(&api.ExtendedCommunitiesAttribute{
 		Communities: extcomms,
 	})
-	nh , _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
+	nh, _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
 	pattrs := append(route.PathAttrs, extcommAttr, nh)
 	req := &api.AddPathRequest{
 		Path: &api.Path{

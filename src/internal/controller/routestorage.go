@@ -6,25 +6,22 @@ import (
 	"github.com/puzpuzpuz/xsync/v4"
 )
 
-
 type uuidRT struct {
-	uuid uuid.UUID
+	uuid    uuid.UUID
 	targets []string
 }
 
-
 type redistributedEvpnStorage struct {
 	routeMap *xsync.Map[evpnRoute, uuidRT]
-	rtMap *utils.MapSet[string, evpnRoute]
+	rtMap    *utils.MapSet[string, evpnRoute]
 }
 
 func newRedistributedEvpnStorage() *redistributedEvpnStorage {
 	return &redistributedEvpnStorage{
 		routeMap: xsync.NewMap[evpnRoute, uuidRT](),
-		rtMap: utils.NewMapSet[string, evpnRoute](),
+		rtMap:    utils.NewMapSet[string, evpnRoute](),
 	}
 }
-
 
 func (s *redistributedEvpnStorage) Store(route evpnRoute, targets []string, vpnUuid uuid.UUID) {
 	oldUuidRt, loaded := s.routeMap.LoadAndStore(route, uuidRT{uuid: vpnUuid, targets: targets})
@@ -64,7 +61,7 @@ func (s *redistributedEvpnStorage) PopByRT(targets []string) []uuid.UUID {
 				uuids = append(uuids, urt.uuid)
 			}
 		}
-		s.rtMap.Delete(rt) 
+		s.rtMap.Delete(rt)
 	}
 	return uuids
 }

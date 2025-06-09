@@ -31,7 +31,6 @@ type Vrf struct {
 	Vni                uint32
 }
 
-
 type VrfDiff struct {
 	Created []oc.VrfConfig
 	Deleted []oc.VrfConfig

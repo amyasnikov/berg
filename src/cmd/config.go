@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/time/rate"
-
 )
 
 type Config struct {
@@ -19,7 +18,7 @@ type Config struct {
 	ConfigFile  string
 	GrpcHosts   string
 	LogLevel    string
-	logger *logrus.Logger
+	logger      *logrus.Logger
 }
 
 func NewConfig(logger *logrus.Logger) (cfg Config) {
@@ -43,13 +42,12 @@ func (c *Config) mustReadConfig() *oc.BgpConfigSet {
 	ensureVrfIdDefined(c.ConfigFile)
 	gobgpConfig, err := config.ReadConfigFile(c.ConfigFile, "toml")
 	if err != nil {
-		c.logger.Fatalf("error reading config file: %w", err)
+		c.logger.Fatalf("error reading config file: %v", err)
 	}
 	return gobgpConfig
 }
 
-
-func (c *Config)watchConfigChanges() <- chan *oc.BgpConfigSet {
+func (c *Config) watchConfigChanges() <-chan *oc.BgpConfigSet {
 	ch := make(chan *oc.BgpConfigSet)
 	rateLimiter := rate.Sometimes{Interval: 1 * time.Second}
 	config.WatchConfigFile(c.ConfigFile, "toml", func() {
@@ -61,7 +59,6 @@ func (c *Config)watchConfigChanges() <- chan *oc.BgpConfigSet {
 	})
 	return ch
 }
-
 
 func ensureVrfIdDefined(fileName string) error {
 	file, err := os.Open(fileName)

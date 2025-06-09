@@ -1,0 +1,35 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.5.0
+  hooks:
+  - id: check-toml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+
+- repo: local
+  hooks:
+  - id: go-fmt
+    name: go fmt
+    entry: bash -lc 'cd src && go fmt ./...'
+    language: system
+    pass_filenames: false
+
+  - id: go-imports
+    name: goimports (module)
+    entry: bash -lc 'cd src && goimports -w ./'
+    language: system
+    pass_filenames: false
+
+  - id: golines
+    name: golines
+    entry: golines
+    language: system
+    files: ^src/.*\.go$
+    types: [go]
+    args: ["-w", "-m", "120"]
+
+  - id: go-vet
+    name: go vet
+    entry: bash -lc 'cd src && go vet ./...'
+    language: system
+    pass_filenames: false

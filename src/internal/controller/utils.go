@@ -19,19 +19,18 @@ func extractRouteTargets(pattrs []*anypb.Any) []string {
 	var com3 api.FourOctetAsSpecificExtended
 	for _, attr := range pattrs {
 		err := anypb.UnmarshalTo(attr, &commAttr, proto.UnmarshalOptions{})
-		if err == nil {
+		if err != nil {
 			continue
 		}
 		for _, community := range commAttr.GetCommunities() {
-			community.String()
-			if err = anypb.UnmarshalTo(community, &com1, proto.UnmarshalOptions{}); err != nil && com1.SubType == 2 {
+			if err = anypb.UnmarshalTo(community, &com1, proto.UnmarshalOptions{}); err == nil && com1.SubType == 2 {
 				routeTargets = append(routeTargets, fmt.Sprintf("%d:%d", com1.Asn, com1.LocalAdmin))
 			}
-			if err = anypb.UnmarshalTo(community, &com2, proto.UnmarshalOptions{}); err != nil && com2.SubType == 2 {
-				routeTargets = append(routeTargets, fmt.Sprintf("%d:%d", com2.Address, com1.LocalAdmin))
+			if err = anypb.UnmarshalTo(community, &com2, proto.UnmarshalOptions{}); err == nil && com2.SubType == 2 {
+				routeTargets = append(routeTargets, fmt.Sprintf("%s:%d", com2.Address, com2.LocalAdmin))
 			}
-			if err = anypb.UnmarshalTo(community, &com3, proto.UnmarshalOptions{}); err != nil && com3.SubType == 2 {
-				routeTargets = append(routeTargets, fmt.Sprintf("%d:%d", com3.Asn, com1.LocalAdmin))
+			if err = anypb.UnmarshalTo(community, &com3, proto.UnmarshalOptions{}); err == nil && com3.SubType == 2 {
+				routeTargets = append(routeTargets, fmt.Sprintf("%d:%d", com3.Asn, com3.LocalAdmin))
 			}
 		}
 	}
@@ -52,7 +51,6 @@ func findNextHop(route fmt.Stringer, pattrs []*anypb.Any) (string, error) {
 	}
 	return "", fmt.Errorf("no nexthop was found for route %s", route.String())
 }
-
 
 func makeRdVrfMap(vrfCfg []oc.VrfConfig) *xsync.Map[string, dto.Vrf] {
 	rdVrfMap := xsync.NewMap[string, dto.Vrf]()

@@ -7,7 +7,6 @@ import (
 	"github.com/osrg/gobgp/v3/pkg/config/oc"
 )
 
-
 func GetVrfDiff(old, new []oc.VrfConfig) dto.VrfDiff {
 	makeVrfMap := func(vrfs []oc.VrfConfig) map[uint32]oc.VrfConfig {
 		result := make(map[uint32]oc.VrfConfig, len(vrfs))

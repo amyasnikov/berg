@@ -33,7 +33,7 @@ func NewApp(vrfConfig []oc.VrfConfig, bgpServer bgpServer, bufsize uint64, logge
 			for _, path := range d.GetPaths() {
 				route, err := ctrl.NewEvpnRouteWithPattrs(path)
 				if err != nil {
-					logger.Errorf("cannot parse evpn path %v: %w", path.Nlri, err)
+					logger.Errorf("cannot parse evpn path %v: %v", path.Nlri, err)
 				}
 				ch <- route
 			}
@@ -66,11 +66,11 @@ func (a *App) receiver() {
 			case reloadConfigMsg:
 				err := a.evpnController.ReloadConfig(*msg.VrfDiff)
 				if err != nil {
-					a.logger.Errorf("error while evpn reloading: %w", err)
+					a.logger.Errorf("error while evpn reloading: %v", err)
 				}
-				a.vpnController.ReloadConfig(*msg.VrfDiff)
+				err = a.vpnController.ReloadConfig(*msg.VrfDiff)
 				if err != nil {
-					a.logger.Errorf("error while vpn reloading: %w", err)
+					a.logger.Errorf("error while vpn reloading: %v", err)
 				}
 			default:
 				a.logger.Errorf("Invalid message from controlChan: %v", msg)

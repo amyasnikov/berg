@@ -9,8 +9,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-
-
 func delRoute(server bgpServer, uuid uuid.UUID, family *api.Family) error {
 	var nlri *anypb.Any
 	rd, _ := anypb.New(&api.RouteDistinguisherTwoOctetASN{})
@@ -24,15 +22,14 @@ func delRoute(server bgpServer, uuid uuid.UUID, family *api.Family) error {
 	nh, _ := anypb.New(&api.NextHopAttribute{NextHop: "0.0.0.0"})
 	binUuid, _ := uuid.MarshalBinary()
 	delReq := &api.DeletePathRequest{
-		Uuid: binUuid,
+		Uuid:   binUuid,
 		Family: family,
 		Path: &api.Path{
-			Uuid: binUuid,
+			Uuid:   binUuid,
 			Family: family,
-			Nlri: nlri,
+			Nlri:   nlri,
 			Pattrs: []*anypb.Any{nh},
 		},
-
 	}
 
 	if err := server.DeletePath(context.TODO(), delReq); err != nil {
