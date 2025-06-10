@@ -19,36 +19,14 @@ jobs:
     - name: Build binary
       run: |
         cd src
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../berg-linux-amd64 .
-        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../berg-darwin-amd64 .
-        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o ../berg-darwin-arm64 .
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../berg-linux-amd64 ./cmd
+        CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../berg-darwin-amd64 ./cmd
+        CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o ../berg-darwin-arm64 ./cmd
 
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release
+      uses: softprops/action-gh-release@v2
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./berg-linux-amd64
-        asset_name: berg-linux-amd64
-        asset_content_type: application/octet-stream
-
-    - name: Upload macOS Intel Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./berg-darwin-amd64
-        asset_name: berg-darwin-amd64
-        asset_content_type: application/octet-stream
-
-    - name: Upload macOS ARM Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./berg-darwin-arm64
-        asset_name: berg-darwin-arm64
-        asset_content_type: application/octet-stream
+        files: |
+          berg-linux-amd64
+          berg-darwin-amd64
+          berg-darwin-arm64
