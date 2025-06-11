@@ -64,7 +64,7 @@ Example configuration:
 
 **I don't get how this works**
 
-BERG does the same thing modern Cisco Nexus switches do. You may search for what `set evpn gateway-ip use-nexthop` NX OS command does. Berg implements the same functionality, so DC fabrics built with non-Cisco equipment are able to set up BGP IPv4 sessions with VMs and achieve optimal traffic formwarding path.
+BERG is the same GoBGP, but with one additional feature: it "redistributes" the routes between IPv4 family inside VRFs and BGP EVPN. When redistributing the route from VRF IPv4 to EVPN Type-5 Overaly Gateway IP is filled out to achieve optimal forwarding. You may search for what `set evpn gateway-ip use-nexthop` Cisco NX OS command does. Berg implements the same functionality, so DC fabrics built with non-Cisco equipment are able to set up BGP IPv4 sessions with VMs and achieve optimal traffic formwarding path.
 
 More info on how Overlay GW IP in Type-5 routes works can be found in [RFC9136](https://datatracker.ietf.org/doc/rfc9136/)
 
